@@ -1,25 +1,36 @@
-var user = require('./user.js')
-var session = require("../../adapter")
-var utils = require("../../utils")
 
-var createUser = function(properties) {
-  return new user(properties)
-}
+(function() {
+  var createUser, Register, session, user, utils;
 
-var registerUser = function(properties) {
-  var promise = new utils.promise
-  var user = createUser({user:properties})
-  user.save().then(function(error, user) {
-    if(!error) {
-      adapter.auth.setCurrentUser(user._object)
-    }
-    promise.send(error, user)
-  })
+  user = require('./user');
 
-  return promise
-}
+  session = require('../../adapter');
 
-module.exports = {
+  utils = require('../../utils');
+
+  createUser = function(properties) {
+    return new user(properties);
+  };
+
+  Register = function(properties) {
+    var user;
+    var promise;
+    promise = new utils.promise;
+    user = createUser({
+      user: properties
+    });
+    user.save().then(function(error, user) {
+      if (!error) {
+        adapter.Auth.setCurrentUser(user._object);
+      }
+      return promise.send(error, user);
+    });
+    return promise;
+  };
+
+  module.exports = {
     createUser: createUser,
-    registerUser: registerUser
-}
+    Register: Register
+  };
+
+}).call(this);

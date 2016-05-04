@@ -1,10 +1,18 @@
-var Create = require("./create.js")
-var CurrentUser = require("./current_user.js")
-var Find = require("./find.js")
 
-module.exports = {
-  createUser: Create.createUser,
-  registerUser: Create.registerUser,
-  getCurrentUser: CurrentUser,
-  findUserById: Find
-}
+(function() {
+  var Create, CurrentUser, Find;
+
+  Create = require('./create');
+
+  CurrentUser = require('./current_user');
+
+  Find = require('./find');
+
+  module.exports = {
+    createUser: Create.createUser,
+    Register: Create.Register,
+    CurrentUser: CurrentUser,
+    findUserById: Find
+  };
+
+}).call(this);

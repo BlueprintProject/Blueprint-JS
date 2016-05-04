@@ -1,1 +1,5 @@
-module.exports = require('./src');
+
+(function() {
+  module.exports = require('./src');
+
+}).call(this);

@@ -1,8 +1,17 @@
-var Find = require("./find.js")
-var Create = require("./create.js")
 
-module.exports.createGroup = Create
+(function() {
+  var Create, Find;
 
-module.exports.getPublicGroup  = Find.getPublicGroup
-module.exports.getPrivateGroup = Find.getPrivateGroup
-module.exports.groupWithId		= Find.groupWithId
+  Find = require('./find');
+
+  Create = require('./create');
+
+  module.exports.CreateGroup = Create;
+
+  module.exports.PublicGroup = Find.PublicGroup;
+
+  module.exports.PublicGroup = Find.PublicGroup;
+
+  module.exports.GroupWithId = Find.GroupWithId;
+
+}).call(this);

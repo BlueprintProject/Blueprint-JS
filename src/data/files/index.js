@@ -1,4 +1,9 @@
-//var Find = require("./find.js")
-var Create = require("./create.js")
 
-module.exports.createFile = Create
+(function() {
+  var Create;
+
+  Create = require('./create');
+
+  module.exports.createFile = Create;
+
+}).call(this);

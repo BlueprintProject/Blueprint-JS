@@ -1,16 +1,24 @@
-var adapter = require('../../adapter')
-var utils = require('../../utils')
-var create = require("./create.js")
 
-module.exports = function(id) {
-  var promise = new utils.promise
+(function() {
+  var adapter, create, utils;
 
-  var path = "users/" + id
-  adapter.api.post(path, parameters, function(response){
-    data = response["response"]["users"][0]
-    user = create.createUser(data)
-    promise.send(false, user)
-  })
+  adapter = require('../../adapter');
 
-  return promise
-}
+  utils = require('../../utils');
+
+  create = require('./create');
+
+  module.exports = function(id) {
+    var path, promise;
+    promise = new utils.promise;
+    path = 'users/' + id;
+    adapter.Api.post(path, parameters, function(response) {
+      var data, user;
+      data = response['response']['users'][0];
+      user = create.createUser(data);
+      return promise.send(false, user);
+    });
+    return promise;
+  };
+
+}).call(this);

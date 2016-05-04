@@ -1,3 +1,5 @@
+
+
 /*if(typeof Blueprint === "undefined") {
   var Blueprint = require("../src")
 }
@@ -35,4 +37,9 @@ describe("Sessions", function() {
 
   })
 });
-*/
+ */
+
+(function() {
+
+
+}).call(this);

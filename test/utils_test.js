@@ -1,13 +1,18 @@
-if(typeof Blueprint === "undefined") {
-  var Blueprint = require("../src")
-}
 
-describe("Utilities", function() {
-  it("Can Run Empty Promise", function(done){
-    var promise = new Blueprint.__utilities.promise
-    promise.send()
+(function() {
+  var Blueprint;
 
-    done()
+  if (typeof Blueprint === 'undefined') {
+    Blueprint = require('../src');
+  }
+
+  describe('Utilities', function() {
+    return it('Can Run Empty Promise', function(done) {
+      var promise;
+      promise = new Blueprint.__utilities.promise;
+      promise.send();
+      return done();
+    });
   });
 
-})
+}).call(this);

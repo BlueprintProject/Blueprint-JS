@@ -1,41 +1,49 @@
-var record = require('./record.js')
-var utils = require('../../utils')
-var adapter = require('../../adapter')
 
+(function() {
+  var adapter, FindOne, Find, record, utils;
 
-var findRecords = function(model, query) {
-  var promise = new utils.promise
+  record = require('./record');
 
-  adapter.records.query(model, query, function(data, meta) {
+  utils = require('../../utils');
 
-    var objects = []
-    if (data) {
-      for (var i = 0; i < data.length; i++) {
-        var object = data[i];
-        object = new record(model, object)
-        objects.push(object)
+  adapter = require('../../adapter');
+
+  Find = function(model, query) {
+    var promise;
+    promise = new utils.promise;
+    adapter.Records.query(model, query, function(data, meta) {
+      var i, object, objects;
+      objects = [];
+      if (data) {
+        i = 0;
+        while (i < data.length) {
+          object = data[i];
+          object = new record(model, object);
+          objects.push(object);
+          i++;
+        }
       }
-    }
+      return promise.send(false, objects, meta);
+    });
+    return promise;
+  };
 
-    promise.send(false, objects, meta)
-  })
+  FindOne = function(model, query) {
+    var promise;
+    promise = new utils.promise;
+    adapter.Records.query(model, query, function(data, meta) {
+      var object;
+      object = null;
+      if (data) {
+        object = new record(model, data[0]);
+      }
+      return promise.send(false, object, meta);
+    });
+    return promise;
+  };
 
-  return promise
-}
+  module.exports.Find = Find;
 
-var findRecord = function(model, query) {
-  var promise = new utils.promise
+  module.exports.FindOne = FindOne;
 
-  adapter.records.query(model, query, function(data, meta) {
-    var object = null;
-    if (data) {
-      object = new record(model, data[0])
-    }
-    promise.send(false, object, meta)
-  })
-
-  return promise
-}
-
-module.exports.findRecords = findRecords;
-module.exports.findRecord = findRecord;
+}).call(this);

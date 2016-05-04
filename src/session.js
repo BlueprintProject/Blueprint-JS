@@ -1,61 +1,68 @@
-var __session = undefined;
 
-function storageGet() {
-  if(typeof window !== "undefined") {
-    return window.localStorage.getItem("__api_session")
-  } else {
-    return __session
-  }
-}
+(function() {
+  var __session, getSession, saveSession, storageClear, storageGet, storageSet;
 
-function storageSet(value) {
-  if(typeof window !== "undefined") {
-    window.localStorage.setItem("__api_session", value)
-  } else {
-    __session = value
-  }
-}
+  __session = void 0;
 
-function storageClear() {
-  if(typeof window !== "undefined") {
-    window.localStorage.removeItem("__api_session")
-  } else {
-    __session = undefined
-  }
-}
+  storageGet = function() {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.getItem('__api_session');
+    } else {
+      return __session;
+    }
+  };
 
-function getSession() {
-  var session_text = storageGet()
-  var session = undefined
-  if(typeof session_text !== "undefined") {
-    session = JSON.parse(session_text)
-  }
+  storageSet = function(value) {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.setItem('__api_session', value);
+    } else {
+      return __session = value;
+    }
+  };
 
-  if(session) {
-    return session
-  } else {
-    return {}
-  }
-}
+  storageClear = function() {
+    if (typeof window !== 'undefined') {
+      return window.localStorage.removeItem('__api_session');
+    } else {
+      return __session = void 0;
+    }
+  };
 
-function saveSession(session) {
-  var session_text = JSON.stringify(session)
-  storageSet(session_text);
-}
+  getSession = function() {
+    var session, session_text;
+    session_text = storageGet();
+    session = void 0;
+    if (typeof session_text !== 'undefined') {
+      session = JSON.parse(session_text);
+    }
+    if (session) {
+      return session;
+    } else {
+      return {};
+    }
+  };
 
-module.exports = {
-  get: function(key) {
-    var session = getSession()
-    return session[key];
-  },
+  saveSession = function(session) {
+    var session_text;
+    session_text = JSON.stringify(session);
+    return storageSet(session_text);
+  };
 
-  set: function(key, value) {
-    var session = getSession()
-    session[key] = value;
-    saveSession(session);
-  },
+  module.exports = {
+    get: function(key) {
+      var session;
+      session = getSession();
+      return session[key];
+    },
+    set: function(key, value) {
+      var session;
+      session = getSession();
+      session[key] = value;
+      return saveSession(session);
+    },
+    clear: function() {
+      return storageClear();
+    }
+  };
 
-  clear: function() {
-    storageClear()
-  }
-}
+}).call(this);

@@ -1,3 +1,9 @@
-module.exports.find = require("./find.js")
-module.exports.create = require("./create.js")
-module.exports.record = require("./record.js")
+
+(function() {
+  module.exports.find = require('./find');
+
+  module.exports.create = require('./create');
+
+  module.exports.record = require('./record');
+
+}).call(this);

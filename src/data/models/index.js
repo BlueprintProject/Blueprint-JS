@@ -1,1 +1,5 @@
-module.exports = require("./model.js")
+
+(function() {
+  module.exports = require('./model');
+
+}).call(this);

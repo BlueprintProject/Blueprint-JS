@@ -1,8 +1,12 @@
-module.exports = {
-  base58: require('./base58.js'),
-  hmac: require('./hmac-sha256.js'),
-  bigInt: require('./bigInt.js'),
-  extend: require('./extend.js'),
-  http: require("./http.js"),
-  promise: require('./promise.js')
-}
+
+(function() {
+  module.exports = {
+    base58: require('./base58'),
+    hmac: require('./hmac-sha256'),
+    bigInt: require('./bigInt'),
+    extend: require('./extend'),
+    http: require('./http'),
+    promise: require('./promise')
+  };
+
+}).call(this);

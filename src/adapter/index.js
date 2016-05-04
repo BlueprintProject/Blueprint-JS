@@ -1,5 +1,9 @@
-module.exports = {
-  records: require("./records.js"),
-  auth: require("./auth.js"),
-  api: require("./api.js")
-}
+
+(function() {
+  module.exports = {
+    Records: require('./records'),
+    Auth: require('./auth'),
+    Api: require('./api')
+  };
+
+}).call(this);

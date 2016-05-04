@@ -1,51 +1,53 @@
-Data = require("./data")
-Adapter = require("./adapter")
-Config = require("./config.js")
 
-var Blueprint = {}
+(function() {
+  var Adapter, Blueprint, Config, Data;
 
-// Config
-Blueprint.Init = Config.init;
-//Blueprint.Config = Config.config;
+  Data = require('./data');
 
-// Groups
-Blueprint.getPublicGroup = Data.getPublicGroup;
-Blueprint.getPrivateGroup = Data.getPrivateGroup;
-Blueprint.createGroup = Data.createGroup;
-Blueprint.groupWithId = Data.groupWithId;
+  Adapter = require('./adapter');
 
-// Data
-Blueprint.createRecord = Data.createRecord;
-Blueprint.findRecords = Data.findRecords;
-Blueprint.findRecord = Data.findRecord;
-Blueprint.record = Data.record;
+  Config = require('./config');
 
-Blueprint.model = Data.model
-
-// Users
-Blueprint.getCurrentUser = Data.getCurrentUser;
-
-// Custom Endpoints
-Blueprint.performEndpoint = Data.performEndpoint;
+  // Base Structure
+  Blueprint = {};
+  Blueprint.Data = {};
 
 
-Blueprint.Register = Data.registerUser;
-Blueprint.Authenticate = Adapter.auth.authenticate;
-Blueprint.Logout = Adapter.auth.logout;
-Blueprint.RestoreSession = Adapter.auth.restoreSession;
+  Blueprint.Init = Config.init;
 
-Blueprint.Adapter = Adapter;
+  // Groups
+  Blueprint.PublicGroup = Data.PublicGroup;
+  Blueprint.PrivateGroup = Data.PublicGroup;
+  Blueprint.CreateGroup = Data.CreateGroup;
+  Blueprint.GroupWithId = Data.GroupWithId;
 
-Blueprint.setCurrentUser = Adapter.auth.setCurrentUser;
+  // Data
+  Blueprint.Data.CreateRecord = Data.CreateRecord;
+  Blueprint.Data.Find = Data.Find;
+  Blueprint.Data.FindOne = Data.FindOne;
 
-Blueprint.__utilities = require("./utils")
+  // Models
+  Blueprint.Model = Data.Model;
 
-if (typeof window !== 'undefined') {
-  if(typeof window.Blueprint === 'undefined') {
-    window.Blueprint = Blueprint;
+  // User
+  Blueprint.CurrentUser = Data.CurrentUser;
+  Blueprint.Register = Data.Register;
+
+  // Sessions
+  Blueprint.Authenticate = Adapter.Auth.Authenticate;
+  Blueprint.RestoreSession = Adapter.Auth.RestoreSession;
+  Blueprint.Logout = Adapter.Auth.Logout;
+
+  Blueprint.setCurrentUser = Adapter.Auth.setCurrentUser;
+
+  if (typeof window !== 'undefined') {
+    if (typeof window.Blueprint === 'undefined') {
+      window.Blueprint = Blueprint;
+    } else {
+      module.exports = Blueprint;
+    }
   } else {
     module.exports = Blueprint;
   }
-} else {
-  module.exports = Blueprint;
-}
+
+}).call(this);
