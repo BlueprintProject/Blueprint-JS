@@ -72,10 +72,11 @@
 
       that = this;
 
-      bulk_request_master_timer = setTimeout(function() {
-        bulk_request_master_timer = undefined;
-        that._send_bulk_request()
-      }, 250)
+      if(typeof bulk_request_master_timer === "undefined")
+        bulk_request_master_timer = setTimeout(function() {
+          bulk_request_master_timer = undefined;
+          that._send_bulk_request()
+        }, 250)
 
       if(bulk_request_incremental_timer) {
         clearTimeout(bulk_request_incremental_timer);
