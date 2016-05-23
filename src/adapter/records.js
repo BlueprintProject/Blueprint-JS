@@ -1,73 +1,74 @@
+'use strict';
 
-(function() {
-  var api;
+var api = require('./api');
+module.exports = {
+  write: function(modelName, data, callback) {
+    return this.writeWithCustomPath(modelName, modelName, data, callback);
+  },
 
-  api = require('./api');
+  trigger: function(modelName, id, callback) {
+    var responseCallback = function() {
+      return callback({});
+    };
 
-  module.exports = {
-    write: function(model_name, data, callback) {
-      return this.write_with_custom_path(model_name, model_name, data, callback);
-    },
-    trigger: function(model_name, id, callback) {
-      var response_callback;
-      response_callback = function(response) {
-        return callback({});
-      };
-      return api.put(model_name + '/' + id + '/trigger', {}, response_callback);
-    },
-    write_with_custom_path: function(path, model_name, data, callback) {
-      var request, response_callback;
-      request = data;
-      response_callback = function(response) {
-        var data;
-        data = {};
-        if (response.error) {
+    return api.put(modelName + '/' + id + '/trigger', {}, responseCallback);
+  },
 
-        } else {
-          data = response['response'][model_name][0];
-        }
-        return callback(data);
-      };
-      if (data.id) {
-        return api.put(path + '/' + data.id, request, response_callback);
+  writeWithCustomPath: function(path, modelName, data, callback) {
+    var request = data;
+
+    var responseCallback = function(response) {
+      var data;
+
+      if (response.error) {
+        data = undefined;
       } else {
-        return api.post(path, request, response_callback);
+        data = response.response[modelName][0];
       }
-    },
-    destroy: function(model_name, id, callback) {
-      return this.destroy_with_custom_path(model_name, model_name, id, callback);
-    },
-    destroy_with_custom_path: function(path, model_name, id, callback) {
-      var response_callback;
-      response_callback = function(response) {
-        var data;
-        data = {};
-        if (response.error) {
+      return callback(data);
+    };
 
-        } else {
-          data = true;
-        }
-        return callback(data);
-      };
-      return api.post(path + '/' + id + '/destroy', {}, response_callback);
-    },
-    query: function(model_name, query, callback) {
-      var request, response_callback;
-      request = {
-        'where': query
-      };
-      response_callback = function(response) {
-        var data;
-        data = [];
-        if (response.error) {
-
-        } else {
-          data = response['response'][model_name];
-        }
-        return callback(data, response['meta']);
-      };
-      return api.post(model_name + '/query', request, response_callback);
+    if (data.id) {
+      return api.put(path + '/' + data.id, request, responseCallback);
+    } else {
+      return api.post(path, request, responseCallback);
     }
-  };
+  },
 
-}).call(this);
+  destroy: function(modelName, id, callback) {
+    return this.destroyWithCustomPath(modelName, modelName, id, callback);
+  },
+
+  destroyWithCustomPath: function(path, modelName, id, callback) {
+
+    var responseCallback = function(response) {
+      var data = {};
+
+      if (!response.error) {
+        data = true;
+      }
+
+      return callback(data);
+    };
+
+    return api.post(path + '/' + id + '/destroy', {}, responseCallback);
+  },
+
+  query: function(modelName, query, callback) {
+    var request = {
+      'where': query
+    };
+
+    var responseCallback = function(response) {
+      var data;
+      data = [];
+      if (response.error) {
+      } else {
+        data = response.response[modelName];
+      }
+      return callback(data, response.meta);
+    };
+
+    return api.post(modelName + '/query', request, responseCallback);
+  }
+};

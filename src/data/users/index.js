@@ -1,18 +1,23 @@
+'use strict';
 
-(function() {
-  var Create, CurrentUser, Find;
+var Create = require('./create');
+var CurrentUser = require('./current_user');
+var Find = require('./find');
+var Auth = require('./auth');
+var User = require('./user');
 
-  Create = require('./create');
+module.exports = {
+  // Create
+  User: User,
+  Register: Create.Register,
 
-  CurrentUser = require('./current_user');
+  // Existing
+  GetCurrentUser: CurrentUser.GetCurrentUser,
+  Logout: CurrentUser.Logout,
 
-  Find = require('./find');
+  // Create Sessions
+  Authenticate: Auth.Authenticate,
+  RestoreSession: Auth.RestoreSession,
 
-  module.exports = {
-    createUser: Create.createUser,
-    Register: Create.Register,
-    CurrentUser: CurrentUser,
-    findUserById: Find
-  };
-
-}).call(this);
+  FindUserById: Find
+};

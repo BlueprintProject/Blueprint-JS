@@ -1,74 +1,81 @@
+'use strict';
 
-(function() {
-  var Blueprint, current_user;
+var handleError = function(error) {
+  throw Error(JSON.stringify(error));
+};
 
-  if (typeof Blueprint === 'undefined') {
-    Blueprint = require('../src');
-  }
+describe('Users', function() {
+  var prefix;
+  prefix = Date.now().toString();
 
-  current_user = void 0;
-
-  describe('Users', function() {
-    var prefix;
-    prefix = Date.now().toString();
-    before(function() {
-      return Blueprint.Init({
-        application_id: '5543850719b6366c23000001',
-        port: 8080
-      });
-    });
-    it('Can Create User', function(done) {
-      return Blueprint.Register({
-        email: prefix + '@test.goblueprint.co',
-        password: '1234567890a',
-        name: prefix + ' Test User'
-      }).then(function(error, user) {
-        if (error) {
-          throw new Error('Server ed Error');
-        } else {
-          if (typeof user.get('id') === 'undefined') {
-            throw new Error('User does not have an ID');
-          }
-        }
-        return Blueprint.getCurrentUser().then(function(error, user) {
-          current_user = user;
-          return done();
-        });
-      });
-    });
-    it('Can Authenticate as User', function(done) {
-      return Blueprint.Authenticate({
-        email: prefix + '@test.goblueprint.co',
-        password: '1234567890a'
-      }).then(function(error) {
-        if (error) {
-          throw new Error('Server ed Error');
-        } else {
-          if (typeof current_user.get('id') === 'undefined') {
-            throw new Error('User does not have an ID');
-          }
-        }
-        return done();
-      });
-    });
-    it('Can Delete User', function(done) {
-      return current_user["delete"]().then(function(error) {
-        if (error) {
-          throw new Error('Server ed Error');
-        }
-        return done();
-      });
-    });
-    it('Can Restore User Session', function(done) {
-      if (!Blueprint.RestoreSession()) {
-        throw new Error('Could not restore session');
-      }
-      return done();
-    });
-    return it('Can Logout User', function(done) {
-      Blueprint.Logout();
-      return done();
+  before(function() {
+    return Blueprint.Init({
+      applicationId: '000000000000000000000001',
+      port: 8080
     });
   });
 
-}).call(this);
+  var email = prefix + '@test.goblueprint.co';
+  var password = '1234567890a';
+
+  it('Can Create User', function(done) {
+
+    Blueprint.Register({
+      email: email,
+      password: password,
+      name: prefix + ' Test User'
+    }).then(function(user) {
+
+      if (user) {
+        done();
+      } else {
+        throw 'No User Returned';
+      }
+
+    }).fail(handleError);
+
+  });
+
+  it('Can Get Current User', function(done) {
+
+    Blueprint.GetCurrentUser().then(function(user) {
+
+      if (user) {
+        done();
+      } else {
+        throw 'No User Returned';
+      }
+
+    }).fail(handleError);
+
+  });
+
+  it('Can Logout', function(done) {
+    Blueprint.Logout();
+
+    Blueprint.GetCurrentUser().then(function() {
+      throw Error('Still Logged In');
+    }).fail(function() {
+      done();
+    });
+
+  });
+
+  it('Can Authenticate', function(done) {
+    Blueprint.Authenticate({
+      email: email,
+      password: password
+    }).then(function() {
+      done();
+    }).fail(handleError);
+  });
+
+  it('Can Destory', function(done) {
+    Blueprint.GetCurrentUser().then(function(currentUser) {
+      currentUser.destroy().then(function() {
+        done();
+      }).fail(handleError);
+    }).fail(handleError);
+  });
+
+});

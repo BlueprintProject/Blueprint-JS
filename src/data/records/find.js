@@ -1,49 +1,69 @@
+'use strict';
+var Record = require('./record');
+var Utils = require('../../utils');
+var Adapter = require('../../adapter');
 
-(function() {
-  var adapter, FindOne, Find, record, utils;
+/**
+ * Query the database for records without a model
+ * @param {string} model - The name of the endpoint the record belongs to
+ * @param {object} query - The query
+ * @function Blueprint.Data.Find
+ * @example
+ * Blueprint.Data.Find("pets", {"species": "Dog"}).then(function(pets){
+ *   // Handle Pet Objects
+ * }).fail(function(error){
+ *   // Handle Failure
+ * })
+ * @returns Promise
+ */
 
-  record = require('./record');
-
-  utils = require('../../utils');
-
-  adapter = require('../../adapter');
-
-  Find = function(model, query) {
-    var promise;
-    promise = new utils.promise;
-    adapter.Records.query(model, query, function(data, meta) {
-      var i, object, objects;
-      objects = [];
-      if (data) {
-        i = 0;
-        while (i < data.length) {
-          object = data[i];
-          object = new record(model, object);
-          objects.push(object);
-          i++;
-        }
+var Find = function(model, query) {
+  var promise = new Utils.promise();
+  Adapter.Records.query(model, query, function(data, meta) {
+    var objects = [];
+    if (data) {
+      var i = 0;
+      while (i < data.length) {
+        var object = data[i];
+        object = new Record(model, object, true);
+        objects.push(object);
+        i++;
       }
-      return promise.send(false, objects, meta);
-    });
-    return promise;
-  };
+    }
+    promise.send(false, objects, meta);
+  });
+  return promise;
+};
 
-  FindOne = function(model, query) {
-    var promise;
-    promise = new utils.promise;
-    adapter.Records.query(model, query, function(data, meta) {
-      var object;
-      object = null;
-      if (data) {
-        object = new record(model, data[0]);
-      }
-      return promise.send(false, object, meta);
-    });
-    return promise;
-  };
 
-  module.exports.Find = Find;
+/**
+ * Query the database for a single record without a model
+ * @param {string} model - The name of the endpoint the record belongs to
+ * @param {object} query - The query
+ * @function Blueprint.Data.Find
+ * @example
+ * Blueprint.Data.FindOne("pets", {"name": "Wiley"}).then(function(pet){
+ *   // Handle Pet Object
+ * }).fail(function(error){
+ *   // Handle Failure
+ * })
+ * @returns Promise
+ */
 
-  module.exports.FindOne = FindOne;
+var FindOne = function(model, query) {
+  var promise = new Utils.promise();
+  query.$limit = 1;
+  Adapter.Records.query(model, query, function(data, meta) {
+    var object = null;
+    if (data) {
+      object = new Record(model, data[0], true);
+      promise.send(false, object, meta);
+    } else {
+      promise.send(true);
+    }
+  });
+  return promise;
+};
 
-}).call(this);
+module.exports.Find = Find;
+module.exports.FindOne = FindOne;

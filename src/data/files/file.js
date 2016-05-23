@@ -1,88 +1,126 @@
+'use strict';
 
-(function() {
-  var adapter, file, record, utils;
+var utils = require('../../utils');
+var adapter = require('../../adapter');
 
-  record = require('../records/record');
+/**
+ * Creates a file object to be uploaded to the server. <br>
+ * <b>Should not be called directly instead use, record.createFile</b>
+ * @name File
+ * @class
+ * @see Blueprint.Data.Record#createFile
+ * @example
+ * var file = record.createFile('file_name.txt', data)
+ * file.save().then(function(){
+ *   // Upload Success!
+ * })
+ * @returns File
+ */
+var File = function(name, record, data) {
+  var properties = {
+    name: name
+  };
 
-  utils = require('../../utils');
+  this.isBlueprintObject = true;
+  this.endpoint = record.endpoint;
+  properties.recordId = record.get('id');
+  if (data && properties.size === void 0) {
+    properties.size = data.length;
+  }
+  this.data = data;
+  this.object = properties;
+  return this;
+};
 
-  adapter = require('../../adapter');
+/**
+ * Get a key from the file
+ * @function File#get
+ * @param key {string} - The key you would like to retrieve
+ */
+File.prototype.get = function(key) {
+  return this.object[key];
+};
 
-  file = record.extend(function(properties, record, data) {
-    this.__is_blueprint_object = true;
-    this._endpoint = record._endpoint;
-    properties['record_id'] = record.get('id');
-    if (data && properties['size'] === void 0) {
-      properties['size'] = data.length;
+/**
+ * Save the file and upload it to the server
+ * @function File#save
+ * @returns Promise
+ */
+File.prototype.save = function() {
+  var promise = new utils.promise();
+  var that = this;
+  var path = this.endpoint + '/' + this.get('record_id') + '/files';
+
+  adapter.Records.writeWithCustomPath(path, 'files', {
+    file: this.object
+  }, function(data) {
+
+    if (typeof data !== void 0) {
+
+      that.object = data;
+
+      var req = data.upload_request; // jshint ignore:line
+
+      var params = req.params;
+      params.file = that.data;
+
+      var formData = new FormData();
+
+      for (var key in params) {
+        var value = params[key];
+        formData.append(key, value);
+      }
+
+      var xmlhttp;
+
+      if (window.XMLHttpRequest) {
+        xmlhttp = new XMLHttpRequest();
+      } else {
+        xmlhttp = new ActiveXObject('Microsoft.XMLHTTP'); // jshint ignore:line
+      }
+
+      xmlhttp.onreadystatechange = function() {
+        if (xmlhttp.readyState === 4) {
+          return promise.send(false, that);
+        }
+      };
+
+      xmlhttp.open('post', req.url);
+      return xmlhttp.send(formData);
     }
-    this._data = data;
-    this._object = properties;
-    return this;
+  });
+  return promise;
+};
+
+/**
+ * Deletes a file
+ * @function File#destroy
+ */
+File.prototype.destroy = function() {
+  var promise = new utils.promise();
+  var path = this.endpoint + '/' + this.get('record_id') + '/files';
+
+  adapter.Records.destroyWithCustomPath(path, 'files', this.get('id'), function(data) {
+    if (typeof data !== void 0) {
+      return promise.send(false);
+    }
   });
 
-  file.prototype.get = function(key) {
-    return this._object[key];
+  return promise;
+};
+
+/**
+ * Gets the signed URL for a file
+ * @function File#getURL
+ */
+File.prototype.getURL = function() {
+  var file = {
+    'file_id': this.get('id'),
+    'record_id': this.get('record_id'),
+    'record_endpoint': this.endpoint
   };
 
-  file.prototype.save = function() {
-    var path, promise, that;
-    promise = new utils.promise;
-    that = this;
-    path = this._endpoint + '/' + this.get('record_id') + '/files';
-    adapter.Records.write_with_custom_path(path, 'files', {
-      file: this._object
-    }, function(data) {
-      var form_data, key, params, req, value, xmlhttp;
-      if (typeof data !== void 0) {
-        that._object = data;
-        req = data['upload_request'];
-        params = req['params'];
-        params['file'] = that._data;
-        form_data = new FormData;
-        for (key in params) {
-          value = params[key];
-          form_data.append(key, value);
-        }
-        if (window.XMLHttpRequest) {
-          xmlhttp = new XMLHttpRequest;
-        } else {
-          xmlhttp = new ActiveXObject('Microsoft.XMLHTTP');
-        }
-        xmlhttp.onreadystatechange = function() {
-          if (xmlhttp.readyState === 4) {
-            return promise.send(false, that);
-          }
-        };
-        xmlhttp.open('post', req['url']);
-        return xmlhttp.send(form_data);
-      }
-    });
-    return promise;
-  };
+  return adapter.Auth.generateSignedURLForFile(file);
+};
 
-  file.prototype["delete"] = function() {
-    var path, promise, that;
-    promise = new utils.promise;
-    that = this;
-    path = this._endpoint + '/' + this.get('record_id') + '/files';
-    adapter.Records.destroy_with_custom_path(path, 'files', this.get('id'), function(data) {
-      if (typeof data !== void 0) {
-        return promise.send(false);
-      }
-    });
-    return promise;
-  };
-
-  file.prototype.getURL = function() {
-    var file;
-    file = {
-      file_id: this.get('id'),
-      record_id: this.get('record_id'),
-      record_endpoint: this._endpoint
-    };
-    return adapter.Auth.generateSignedURLForFile(file);
-  };
-
-  module.exports = file;
-
-}).call(this);
+module.exports = File;

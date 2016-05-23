@@ -1,68 +1,93 @@
+'use strict';
 
-(function() {
-  var modelify;
+var modelify = function(records, inject) {
+  if (records.isBlueprintObject) {
+    inject(records);
+    return records;
+  } else {
+    var modeledRecords = [];
+    records.forEach(function(v) {
+      inject(v);
+      return modeledRecords.push(v);
+    });
+    return modeledRecords;
+  }
+};
 
-  modelify = function(records, inject) {
-    var modeled_records;
-    if (records.__is_blueprint_object) {
-      inject(records);
-      return records;
-    } else {
-      modeled_records = [];
-      records.forEach(function(v, i) {
-        inject(v);
-        return modeled_records.push(v);
-      });
-      return modeled_records;
-    }
-  };
+/**
+ * Creates a new record without a model
+ * @name Blueprint.Model
+ * @class
+ * @example
+ * var dog = new Blueprint.Model('pets', function(){
+ *   // Custom Model Methods
+ * });
+ * @returns Blueprint.Model
+ */
 
-  module.exports = function(name, instance_code) {
-    var constructor, inject, utils;
-    utils = require('../../utils');
-    inject = function(obj) {
-      obj.update = function(data) {
-        var key, results1, value;
-        results1 = [];
-        for (key in data) {
-          value = data[key];
-          results1.push(obj.set(key, value));
-        }
-        return results1;
-      };
-      return instance_code.call(obj);
-    };
-    constructor = function(base_data) {
-      var object;
-      object = modelify(require('../records').create(name, {}), inject);
-      if (base_data) {
-        object.update(base_data);
+var Model = function(name, instanceCode) {
+  var utils = require('../../utils');
+
+  var inject = function(obj) {
+    obj.update = function(data) {
+      var results1 = [];
+      for (var key in data) {
+        var value = data[key];
+        results1.push(obj.set(key, value));
       }
-      return object;
+      return results1;
     };
-    constructor.find = function(where) {
-      var promise;
-      promise = new utils.promise;
-      require('../records/find').Find(name, where).then(function(results) {
-        results = modelify(results, inject);
-        return promise.send(void 0, results);
-      }).fail(function(error) {
-        return promise.send(error);
-      });
-      return promise;
-    };
-    constructor.findOne = function(where) {
-      var promise;
-      promise = new utils.promise;
-      require('../records/find').FindOne(name, where).then(function(result) {
-        result = modelify(result, inject);
-        return promise.send(void 0, result);
-      }).fail(function(error) {
-        return promise.send(error);
-      });
-      return promise;
-    };
-    return constructor;
+
+    return instanceCode.call(obj);
   };
 
-}).call(this);
+  var constructor = function(baseData) {
+    var object = modelify(require('../records').create(name, {}), inject);
+    if (baseData) {
+      object.update(baseData);
+    }
+    return object;
+  };
+
+  /**
+   * Query the database for records without a model
+   * @param {string} model - The name of the endpoint the record belongs to
+   * @param {object} query - The query
+   * @function Blueprint.Model.Find
+   * @returns Promise
+   */
+
+  constructor.Find = function(where) {
+    var promise = new utils.promise();
+    require('../records/find').Find(name, where).then(function(results) {
+      results = modelify(results, inject);
+      return promise.send(void 0, results);
+    }).fail(function(error) {
+      return promise.send(error);
+    });
+    return promise;
+  };
+
+  /**
+   * Query the database for a single record without a model
+   * @param {string} model - The name of the endpoint the record belongs to
+   * @param {object} query - The query
+   * @function Blueprint.Model.FindOne
+   * @returns Promise
+   */
+
+  constructor.FindOne = function(where) {
+    var promise = new utils.promise();
+    require('../records/find').FindOne(name, where).then(function(result) {
+      result = modelify(result, inject);
+      return promise.send(void 0, result);
+    }).fail(function(error) {
+      return promise.send(error);
+    });
+    return promise;
+  };
+
+  return constructor;
+};
+
+module.exports = Model;

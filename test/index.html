@@ -6,7 +6,7 @@
 </head>
 <body>
   <div id="mocha"></div>
-  <script src="../build/Blueprint-SDK.js"></script>
+  <script src="../build/Blueprint-JS.js"></script>
   <script src="../node_modules/mocha/mocha.js"></script>
 
   <script>
@@ -14,13 +14,9 @@
     mocha.slow(300);
   </script>
 
-  <script src="custom_endpoint_test.js"></script>
   <script src="user_test.js"></script>
-  <script src="records_test.js"></script>
-  <script src="groups_test.js"></script>
-  <script src="session_test.js"></script>
-  <script src="utils_test.js"></script>
-  <script src="file_test.js"></script>
+  <script src="record_test.js"></script>
+  <script src="group_test.js"></script>
 
   <script>
     mocha.checkLeaks();

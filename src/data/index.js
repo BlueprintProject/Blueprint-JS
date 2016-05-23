@@ -1,39 +1,44 @@
+'use strict';
 
-(function() {
-  var CustomEndpoints, Data, Files, Groups, Records, Users;
+var Records = require('./records');
+var Groups = require('./groups');
+var Users = require('./users');
+var Models = require('./models');
 
-  Records = require('./records');
+/**
+ * Used for Interacting With Data
+ * @module blueprint/data
+ * @private
+ */
+var Data = {};
 
-  Groups = require('./groups');
+Data.Records = {};
+Data.Records.Record = Records.Record;
+Data.Records.Find = Records.find.Find;
+Data.Records.FindOne = Records.find.FindOne;
 
-  Users = require('./users');
+Data.Groups = {};
+Data.Groups.CreateGroup = Groups.CreateGroup;
+Data.Groups.PrivateGroup = Groups.PrivateGroup;
+Data.Groups.PublicGroup = Groups.PublicGroup;
+Data.Groups.GroupWithId = Groups.GroupWithId;
+Data.Groups.Group = Groups.Group;
 
-  Files = require('./files');
+Data.Users = {};
 
-  Data = {};
+// Existing Sessions
+Data.Users.GetCurrentUser = Users.GetCurrentUser;
+Data.Users.Logout = Users.Logout;
 
-  Data.CreateRecord = Records.create;
+// Creating Users
+Data.Users.Register = Users.Register;
+Data.Users.Model = Models;
 
-  Data.Find = Records.find.Find;
+// Creating Sessions
+Data.Users.Authenticate = Users.Authenticate;
+Data.Users.RestoreSession = Users.RestoreSession;
 
-  Data.FindOne = Records.find.FindOne;
+Data.Models = {};
+Data.Models.Model = Models.Model;
 
-  Data.record = Records.record;
-
-  Data.CreateGroup = Groups.CreateGroup;
-
-  Data.PublicGroup = Groups.PublicGroup;
-
-  Data.PublicGroup = Groups.PublicGroup;
-
-  Data.GroupWithId = Groups.GroupWithId;
-
-  Data.CurrentUser = Users.CurrentUser;
-
-  Data.Register = Users.Register;
-
-  Data.Model = require('./models');
-
-  module.exports = Data;
-
-}).call(this);
+module.exports = Data;

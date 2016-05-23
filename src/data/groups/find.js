@@ -1,29 +1,23 @@
+'use strict';
 
-(function() {
-  var config, group, session;
+var Session = require('../../session');
+var Config = require('../../config');
+var Group = require('./group');
 
-  session = require('../../session');
+module.exports.PrivateGroup = function() {
+  return new Group({
+    id: Session.get('user_id')
+  });
+};
 
-  config = require('../../config');
+module.exports.PublicGroup = function() {
+  return new Group({
+    id: Config.get('applicationId')
+  });
+};
 
-  group = require('./group');
-
-  module.exports.PublicGroup = function() {
-    return new group({
-      id: session.get('user_id')
-    });
-  };
-
-  module.exports.PublicGroup = function() {
-    return new group({
-      id: config.get('application_id')
-    });
-  };
-
-  module.exports.GroupWithId = function(id) {
-    return new group({
-      id: id
-    });
-  };
-
-}).call(this);
+module.exports.GroupWithId = function(id) {
+  return new Group({
+    id: id
+  });
+};

@@ -1,5 +1,3 @@
+'use strict';
 
-(function() {
-  module.exports = require('./model');
-
-}).call(this);
+module.exports = require('./model');

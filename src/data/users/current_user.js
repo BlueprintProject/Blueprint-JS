@@ -1,31 +1,58 @@
+'use strict';
 
-(function() {
-  var auth, create, current_user, utils;
+var Adapter = require('../../adapter');
+var Utils = require('../../utils');
 
-  auth = require('../../adapter/auth');
+var cachedUser;
+var cachedUserLoaded;
 
-  create = require('./create');
+var setCachedUser = function(currentUserData) {
+  var User = require('./user');
+  cachedUser = new User(currentUserData);
+  cachedUserLoaded = true;
+};
 
-  utils = require('../../utils');
 
-  current_user = void 0;
+/**
+  * Allows you to retrive the current user object
+  * @function Blueprint.GetCurrentUser
+  * @returns Blueprint.User
+  */
 
-  module.exports = function() {
-    var promise;
-    promise = new utils.promise;
-    if (typeof current_user === 'undefined') {
-      Auth.CurrentUser(function(current_user_data) {
-        if (current_user_data === false) {
-          return promise.send(true);
-        } else {
-          current_user = create.createUser(current_user_data);
-          return promise.send(false, current_user);
-        }
-      });
-    } else {
-      promise.send(false, current_user);
-    }
-    return promise;
-  };
+var GetCurrentUser = function() {
+  var promise = new Utils.promise();
 
-}).call(this);
+  if (cachedUserLoaded) {
+    promise.send(false, cachedUser);
+  } else {
+    Adapter.Auth.CurrentUser(function(currentUserData) {
+      if (currentUserData) {
+        setCachedUser(currentUserData);
+        return promise.send(false, cachedUser);
+      } else {
+        return promise.send(true);
+      }
+    });
+  }
+
+  return promise;
+};
+
+/**
+  * Destroys the auth session
+  * @function Blueprint.Logout
+  */
+
+var Logout = function() {
+  cachedUser = undefined;
+  cachedUserLoaded = false;
+
+  Adapter.Auth.Logout();
+};
+
+module.exports = {
+  GetCurrentUser: GetCurrentUser,
+  Logout: Logout,
+
+  setCachedUser: setCachedUser
+};

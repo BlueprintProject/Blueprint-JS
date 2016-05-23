@@ -1,26 +1,42 @@
+'use strict';
 
-(function() {
-  var config, extend, init;
+var extend = require('./utils/extend');
 
-  extend = require('./utils/extend');
+/**
+ * Config
+ * @module blueprint/config
+ * @private
+ */
+var config = {};
 
-  config = {
-    host: 'localhost',
-    protocol: 'http',
-    port: 8080,
-    application_id: '000000000000000000000001'
-  };
+/** The base configuration object */
+var baseConfig = {
+  host: 'localhost',
+  protocol: 'http',
+  port: 8080,
+  applicationId: '000000000000000000000001'
+};
 
-  module.exports.config = config;
+// The configuration object
+config.currentConfiguration = baseConfig;
 
-  init = function(config) {
-    return config = extend(module.exports.config, config);
-  };
+/**
+ * Config Init
+ * Sets the base configuration
+ * @param {Object} config
+ * @alias Blueprint.Init
+ * @static
+ */
+config.Init = function(newConfig) {
+  config.currentConfiguration = extend(config.currentConfiguration, newConfig);
+};
 
-  module.exports.init = init;
+/**
+ * Get an item from the configuration
+ * @param {String} key
+ */
+config.get = function(key) {
+  return config.currentConfiguration[key];
+};
 
-  module.exports.get = function(key) {
-    return module.exports.config[key];
-  };
-
-}).call(this);
+module.exports = config;

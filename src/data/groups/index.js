@@ -1,17 +1,9 @@
+'use strict';
 
-(function() {
-  var Create, Find;
+var Find = require('./find');
+var Group = require('./group');
 
-  Find = require('./find');
-
-  Create = require('./create');
-
-  module.exports.CreateGroup = Create;
-
-  module.exports.PublicGroup = Find.PublicGroup;
-
-  module.exports.PublicGroup = Find.PublicGroup;
-
-  module.exports.GroupWithId = Find.GroupWithId;
-
-}).call(this);
+module.exports.Group = Group;
+module.exports.PublicGroup = Find.PublicGroup;
+module.exports.PrivateGroup = Find.PrivateGroup;
+module.exports.GroupWithId = Find.GroupWithId;

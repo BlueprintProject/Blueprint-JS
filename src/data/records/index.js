@@ -1,9 +1,8 @@
+'use strict';
 
-(function() {
-  module.exports.find = require('./find');
+var records = {};
 
-  module.exports.create = require('./create');
+records.find = require('./find');
+records.Record = require('./record');
 
-  module.exports.record = require('./record');
-
-}).call(this);
+module.exports = records;

@@ -1,24 +1,28 @@
+'use strict';
 
-(function() {
-  var adapter, create, utils;
+var Adapter = require('../../adapter');
+var Utils = require('../../utils');
 
-  adapter = require('../../adapter');
+var User = require('./user');
 
-  utils = require('../../utils');
+/**
+  * Allows you to get a user by their id
+  * @function Blueprint.FindUserById
+  * @param id {string} - The id of the user you wish to retrieve
+  * @returns Promise
+  */
 
-  create = require('./create');
+module.exports = function(id) {
+  var promise = new Utils.promise();
+  var path = 'users/' + id;
 
-  module.exports = function(id) {
-    var path, promise;
-    promise = new utils.promise;
-    path = 'users/' + id;
-    adapter.Api.post(path, parameters, function(response) {
-      var data, user;
-      data = response['response']['users'][0];
-      user = create.createUser(data);
-      return promise.send(false, user);
-    });
-    return promise;
-  };
+  Adapter.Api.post(path, {
+    'id': id
+  }, function(response) {
+    var data = response.response.users[0];
+    var user = new User(data);
+    promise.send(false, user);
+  });
 
-}).call(this);
+  return promise;
+};

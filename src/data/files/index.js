@@ -1,9 +1,5 @@
+'use strict';
 
-(function() {
-  var Create;
+var File = require('./file');
 
-  Create = require('./create');
-
-  module.exports.createFile = Create;
-
-}).call(this);
+module.exports.File = File;

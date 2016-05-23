@@ -1,159 +1,271 @@
+'use strict';
 
-(function() {
-  var adapter, record, utils;
+var Utils = require('../../utils');
+var Adapter = require('../../adapter');
 
-  utils = require('../../utils');
+/**
+ * Creates a new record without a model
+ * @name Blueprint.Data.Record
+ * @class
+ * @example
+ * var dog = new Blueprint.Data.Record('pets', {
+ *   species: 'dog',
+ *   name: 'wiley'
+ * });
+ * @returns Blueprint.Model
+ */
 
-  adapter = require('../../adapter');
+var Record = function(endpoint, object, preNested) {
+  this.isBlueprintObject = true;
+  this.noContentRoot = false;
+  this.endpoint = endpoint;
 
-  record = function(endpoint, data) {
-    var f, file, i, index, key, keys;
-    this.__is_blueprint_object = true;
-    this.__no_content_root = false;
-    this._endpoint = endpoint;
-    this._object = data;
-    this._files = {};
-    if (typeof this._object.permissions === 'undefined') {
-      this._object.permissions = {};
-    }
-    keys = ['read', 'write', 'destroy'];
-    for (index in keys) {
-      if (!isNaN(parseInt(index))) {
-        key = keys[index] + '_group_ids';
-        if (typeof this._object.permissions[key] === 'undefined') {
-          this._object.permissions[key] = [];
-        }
+  if (preNested) {
+    this.object = object;
+  } else {
+    this.object = {};
+    this.object.content = object;
+  }
+
+  this.files = {};
+
+  if (typeof this.object.permissions === 'undefined') {
+    this.object.permissions = {};
+  }
+
+  var keys = [
+    'read',
+    'write',
+    'destroy'
+  ];
+
+  for (var index in keys) {
+    if (!isNaN(parseInt(index))) {
+      var key = keys[index] + '_group_ids';
+      if (typeof this.object.permissions[key] === 'undefined') {
+        this.object.permissions[key] = [];
       }
     }
-    if (typeof data['files'] !== 'undefined') {
-      for (i in data['files']) {
-        file = require('../files');
-        f = data['files'][i];
-        this._files[f['name']] = new file.createFile(f, this);
+  }
+
+  if (typeof this.object.files !== 'undefined') {
+    for (var i in this.object.files) {
+      var f = this.object.files[i];
+      var Files = require('../files');
+      this.files[f.name] = new Files.createFile(f, this);
+    }
+  }
+
+  return this;
+};
+
+
+/**
+ * Set a value in the object's content
+ * @function Blueprint.Data.Record#set
+ * @param key {string} - The key you would like to set
+ * @param value {object} - The value you would like to set
+ */
+Record.prototype.set = function(key, value) {
+  this.object.content[key] = value;
+};
+
+/**
+ * Get a value in the object's content
+ * @function Blueprint.Data.Record#get
+ * @param key {string} - The key you would like to get
+ * @returns Object
+ */
+Record.prototype.get = function(key) {
+  if (key === 'id') {
+    return this.object[key];
+  } else {
+    var value = this.object.content[key];
+    if (!value) {
+      value = this.object[key];
+    }
+    return value;
+  }
+};
+
+/*
+ * Permissions
+ */
+
+Record.prototype.addGroup = function(type, group) {
+  var groupId = group.get('id');
+  var key = type + '_group_ids';
+  this.object.permissions[key].push(groupId);
+};
+
+Record.prototype.removeGroup = function(type, group) {
+  var groupId = group.get('id');
+  var key = type + '_group_ids';
+  if (typeof this.object.permissions === 'object') {
+    if (typeof this.object.permissions[key] === 'object') {
+      var index = this.object.permissions[key].indexOf(groupId);
+      if (index !== -1) {
+        return this.object.permissions[key].splice(index, 1);
       }
     }
-    return this;
+  }
+};
+
+/**
+ * Authorize a group to read this record
+ * @function Blueprint.Data.Record#addReadGroup
+ * @param group {Blueprint.Group} - The group you would like to add
+ */
+Record.prototype.addReadGroup = function(group) {
+  return this.addGroup('read', group);
+};
+
+/**
+ * Authorize a group to write to this record
+ * @function Blueprint.Data.Record#addWriteGroup
+ * @param group {Blueprint.Group} - The group you would like to add
+ */
+Record.prototype.addWriteGroup = function(group) {
+  return this.addGroup('write', group);
+};
+
+/**
+ * Authorize a group to destroy this record
+ * @function Blueprint.Data.Record#addDestroyGroup
+ * @param group {Blueprint.Group} - The group you would like to add
+ */
+Record.prototype.addDestroyGroup = function(group) {
+  return this.addGroup('destroy', group);
+};
+
+/**
+ * Deauthorize a group from reading this record
+ * @function Blueprint.Data.Record#removeReadGroup
+ * @param group {Blueprint.Group} - The group you would like to remove
+ */
+Record.prototype.removeReadGroup = function(group) {
+  return this.removeGroup('read', group);
+};
+
+/**
+ * Deauthorize a group from writing to this record
+ * @function Blueprint.Data.Record#removeWriteGroup
+ * @param group {Blueprint.Group} - The group you would like to remove
+ */
+Record.prototype.removeWriteGroup = function(group) {
+  return this.removeGroup('write', group);
+};
+
+/**
+ * Deauthorize a group from destroying this record
+ * @function Blueprint.Data.Record#removeDestroyGroup
+ * @param group {Blueprint.Group} - The group you would like to remove
+ */
+Record.prototype.removeDestroyGroup = function(group) {
+  return this.removeGroup('destroy', group);
+};
+
+/*
+ * Files
+ */
+
+/**
+  * Creates a file object to be uploaded to the server
+  * @function Blueprint.Data.Record#createFile
+  * @param name {string} - The name of the file to upload
+  * @param data {blob} - The data you would like to upload
+  */
+Record.prototype.createFile = function(name, data) {
+  var Files = require('../files');
+  return new Files.File(name, this, data);
+};
+
+/**
+  * Creates a file object to be uploaded to the server
+  * @function Blueprint.Data.Record#getFileWithName
+  * @param fileName {string} - The name of the file to get
+  * @returns File
+  */
+Record.prototype.getFileWithName = function(fileName) {
+  return this.files[fileName];
+};
+
+/**
+  * Saves the record in the database
+  * @function Blueprint.Data.Record#save
+  * @returns Promise
+  */
+Record.prototype.save = function() {
+  var promise = new Utils.promise();
+  var that = this;
+  var data = {
+    id: this.object.id,
+    content: this.object.content,
+    permissions: this.object.permissions
   };
 
-  record.prototype._addGroup = function(type, group) {
-    var group_id, key;
-    group_id = group.get('id');
-    key = type + '_group_ids';
-    return this._object.permissions[key].push(group_id);
-  };
+  if (this.object.user) {
+    data.user = this.object.user;
+  }
 
-  record.prototype._removeGroup = function(type, group) {
-    var group_id, index, key;
-    group_id = group.get('id');
-    key = type + '_group_ids';
-    if (typeof this._object.permissions === 'object') {
-      if (typeof this._object.permissions[key] === 'object') {
-        index = this._object.permissions[key].indexOf(group_id);
-        if (index !== -1) {
-          return this._object.permissions[key].splice(index, 1);
-        }
-      }
-    }
-  };
-
-  record.prototype.set = function(key, value) {
-    return this._object.content[key] = value;
-  };
-
-  record.prototype.get = function(key) {
-    if (key === 'id') {
-      return this._object[key];
-    } else if (this.__no_content_root) {
-      return this._object[key];
+  Adapter.Records.write(this.endpoint, data, function(returnData) {
+    if (typeof returnData === 'undefined') {
+      promise.send(true, that.object);
     } else {
-      return this._object.content[key];
+      that.object = returnData;
+      promise.send(false, that);
     }
-  };
+  });
 
-  record.prototype.addReadGroup = function(group) {
-    return this._addGroup('read', group);
-  };
+  return promise;
+};
 
-  record.prototype.addWriteGroup = function(group) {
-    return this._addGroup('write', group);
-  };
+/**
+  * Removes the record in the database
+  * @function Blueprint.Data.Record#destroy
+  * @returns Promise
+  */
+Record.prototype.destroy = function() {
+  var promise = new Utils.promise();
 
-  record.prototype.addDestroyGroup = function(group) {
-    return this._addGroup('destroy', group);
-  };
-
-  record.prototype.removeReadGroup = function(group) {
-    return this._removeGroup('read', group);
-  };
-
-  record.prototype.removeWriteGroup = function(group) {
-    return this._removeGroup('write', group);
-  };
-
-  record.prototype.removeDestroyGroup = function(group) {
-    return this._removeGroup('destroy', group);
-  };
-
-  record.prototype.save = function() {
-    var data, promise, that;
-    promise = new utils.promise;
-    that = this;
-    data = {
-      id: this._object['id'],
-      content: this._object['content'],
-      permissions: this._object['permissions']
-    };
-    if (this._object['user']) {
-      data['user'] = this._object['user'];
+  Adapter.Records.destroy(this.endpoint, this.get('id'), function(data) {
+    if (typeof data === 'undefined') {
+      promise.send(true);
+    } else {
+      promise.send(false);
     }
-    adapter.Records.write(this._endpoint, data, function(data) {
-      if (typeof data !== void 0) {
-        that._object = data;
-        return promise.send(false, that);
-      }
-    });
-    return promise;
-  };
+  });
 
-  record.prototype["delete"] = function() {
-    var promise, that;
-    promise = new utils.promise;
-    that = this;
-    adapter.Records.destroy(this._endpoint, this.get('id'), function(data) {
-      if (typeof data !== void 0) {
-        return promise.send(false);
-      }
-    });
-    return promise;
-  };
+  return promise;
+};
 
-  record.prototype.trigger = function() {
-    var promise, that;
-    promise = new utils.promise;
-    that = this;
-    adapter.Records.trigger(this._endpoint, this.get('id'), function(data) {
-      if (typeof data !== void 0) {
-        return promise.send(false);
-      }
-    });
-    return promise;
-  };
+/**
+  * Triggers an update notification for the record
+  * @function Blueprint.Data.Record#trigger
+  * @returns Promise
+  */
+Record.prototype.trigger = function() {
+  var promise = new Utils.promise();
 
-  record.prototype.createFile = function(properties, data) {
-    var files;
-    files = require('../files');
-    return files.createFile(properties, this, data);
-  };
+  Adapter.Records.trigger(this.endpoint, this.get('id'), function(data) {
+    if (typeof data === 'undefined') {
+      promise.send(true);
+    } else {
+      promise.send(false);
+    }
+  });
+  return promise;
+};
 
-  record.prototype.getFileWithName = function(file_name) {
-    return this._files[file_name];
-  };
+/**
+  * Allows you to subclass this class
+  * @function Blueprint.Data.Record.Extend
+  * @returns Blueprint.Data.Record
+  * @param object {object} - The object you would like to inject
+  */
+Record.extend = function(object) {
+  object.prototype = Utils.extend(this.prototype, object.prototype);
+  return object;
+};
 
-  record.extend = function(object) {
-    object.prototype = utils.extend(object.prototype, record.prototype);
-    return object;
-  };
-
-  module.exports = record;
-
-}).call(this);
+module.exports = Record;

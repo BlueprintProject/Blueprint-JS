@@ -1,167 +1,196 @@
+'use strict';
 
-(function() {
-  var config, current_user, current_user_loaded, session, setCurrentUser, utils;
+var Utils = require('../utils');
+var Config = require('../config');
+var Session = require('../session');
 
-  utils = require('../utils');
+var currentUser = {};
+var currentUserLoaded = false;
 
-  config = require('../config');
+var setCurrentUser = function(user) {
+  currentUser = user;
+  currentUserLoaded = true;
 
-  session = require('../session');
+  // jshint ignore: start
 
-  current_user = {};
+  if (currentUser['auth_token']) {
+    Session.set('auth_token', currentUser.auth_token);
+    Session.set('user_id', currentUser.id);
+    Session.set('session_id', currentUser.session_id);
+  }
 
-  current_user_loaded = false;
+// jshint ignore: end
+};
 
-  setCurrentUser = function(user) {
-    current_user = user;
-    current_user_loaded = true;
-    if (current_user['auth_token']) {
-      session.set('auth_token', current_user['auth_token']);
-      session.set('user_id', current_user['id']);
-      return session.set('session_id', current_user['session_id']);
+var generateRequest = function(request, path, method) {
+  request.authorization = {
+    'user_id': Session.get('user_id'),
+    'guid': this.generateGuid(),
+    'timestamp': Math.floor(new Date().getTime() / 1000),
+    'session_id': Session.get('session_id')
+  };
+
+  request.authorization.signature = this.signRequest(
+    request,
+    path,
+    method,
+    Session.get('auth_token')
+  );
+
+  return request;
+};
+
+var generateGuid = function() {
+  var s4;
+  s4 = function() {
+    return Math.floor((1 + Math.random()) * 65536).toString(16).substring(1);
+  };
+  return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
+};
+
+var signRequest = function(request, path, method, authToken) {
+  var string;
+  string = request.authorization.timestamp.toString();
+  string += request.authorization.guid;
+  string += path;
+  string += method;
+  request.request = this.sortHash(request.request);
+  string += JSON.stringify(request.request);
+  return this.signString(string, authToken);
+};
+
+var sortHash = function(hash) {
+  var keys = [];
+  var newHash = {};
+  for (var hashKey in hash) {
+    if (hash.hasOwnProperty(hashKey)) {
+      keys.push(hashKey);
+    }
+  }
+  keys.sort();
+  for (var i in keys) {
+    var key = keys[i];
+    var value = hash[key];
+    if (typeof value === 'object' && value.length === void 0) {
+      value = this.sortHash(value);
+    }
+    newHash[key] = value;
+  }
+  return newHash;
+};
+
+var signString = function(string, token) {
+  var hash = Utils.hmac(string, token);
+  var bigInt = Utils.bigInt.str2bigInt(hash, 16);
+  return Utils.base58.encodeBigInt(bigInt);
+};
+
+var Authenticate = function(data) {
+  Session.clear();
+
+  var request = {
+    user: {
+      email: data.email,
+      password: data.password
     }
   };
 
-  module.exports = {
-    _generate_request: function(request, path, method) {
-      request.authorization = {
-        user_id: session.get('user_id'),
-        guid: this._generate_guid(),
-        timestamp: Math.floor((new Date).getTime() / 1000),
-        session_id: session.get('session_id')
-      };
-      request.authorization.signature = this._sign_request(request, path, method, session.get('auth_token'));
-      return request;
-    },
-    _generate_guid: function() {
-      var s4;
-      s4 = function() {
-        return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
-      };
-      return s4() + s4() + '-' + s4() + '-' + s4() + '-' + s4() + '-' + s4() + s4() + s4();
-    },
-    _sign_request: function(request, path, method, auth_token) {
-      var string;
-      string = request.authorization.timestamp.toString();
-      string += request.authorization.guid;
-      string += path;
-      string += method;
-      request.request = this._sort_hash(request.request);
-      string += JSON.stringify(request.request);
-      return this._sign_string(string, auth_token);
-    },
-    _sort_hash: function(hash) {
-      var key;
-      var i, key, keys, new_hash, value;
-      keys = [];
-      new_hash = {};
-      for (key in hash) {
-        if (hash.hasOwnProperty(key)) {
-          keys.push(key);
-        }
+  if (data.facebookId) {
+    request = {
+      user: {
+        'facebook_id': data.facebookId,
+        'facebook_token': data.facebookToken
       }
-      keys.sort();
-      for (i in keys) {
-        key = keys[i];
-        value = hash[key];
-        if (typeof value === 'object' && value.length === void 0) {
-          value = this._sort_hash(value);
-        }
-        new_hash[key] = value;
-      }
-      return new_hash;
-    },
-    _sign_string: function(string, token) {
-      var bigInt, hash;
-      hash = utils.hmac(string, token);
-      bigInt = utils.bigInt.str2bigInt(hash, 16);
-      return utils.base58.encodeBigInt(bigInt);
-    },
-    Authenticate: function(data) {
-      var api, promise, request;
-      api = require('./api');
-      session.clear();
-      request = {
-        user: {
-          email: data.email,
-          password: data.password
-        }
-      };
-      if (data.facebook_id) {
-        request = {
-          user: {
-            facebook_id: data.facebook_id,
-            facebook_token: data.facebook_token
-          }
-        };
-      }
-      promise = new utils.promise;
-      api.post('users/Authenticate', request, function(response) {
-        if (response === false || response['error']) {
-          return promise.send(true);
-        } else {
-          setCurrentUser(response['response']['users'][0]);
-          return promise.send(false, current_user);
-        }
-      });
-      return promise;
-    },
-    Logout: function() {
-      return session.clear();
-    },
-    RestoreSession: function() {
-      if (session.get('auth_token')) {
-        return session.get('user_id');
-      } else {
-        return false;
-      }
-    },
-    CurrentUser: function(callback) {
-      var path, that;
-      if (typeof callback !== 'undefined') {
-        that = this;
-        if (current_user_loaded === false) {
-          if (typeof session.get('user_id') === 'undefined') {
-            return callback(false);
-          } else {
-            path = 'users/' + session.get('user_id');
-            return adapter.Api.post(path, {}, function(response) {
-              var data;
-              data = response['response']['users'][0];
-              that.setCurrentUser(data);
-              return callback(data);
-            });
-          }
-        } else {
-          return callback(this.current_user);
-        }
-      } else {
-        return current_user;
-      }
-    },
-    setCurrentUser: setCurrentUser,
-    generateSignedURLForFile: function(properties) {
-      var auth_token, host, session_id, signature, timestamp, url;
-      url = '/' + config.get('application_id');
-      url += '/' + properties['record_endpoint'];
-      url += '/' + properties['record_id'];
-      url += '/files';
-      url += '/' + properties['file_id'];
-      if (session.get('auth_token')) {
-        timestamp = Math.floor((new Date).getTime() / 1000 / (24 * 60 * 60));
-        session_id = session.get('session_id');
-        auth_token = session.get('auth_token');
-        signature = this._sign_string(timestamp + properties['file_id'], auth_token);
-        url += '?timestamp=' + timestamp;
-        url += '&session_id=' + session_id;
-        url += '&signature=' + signature;
-      }
-      host = config.get('protocol') + '://' + config.get('host');
-      if (config.get('port') !== 443 && config.get('port') !== 80) {
-        host += ':' + config.get('port');
-      }
-      return host + url;
-    }
-  };
+    };
+  }
 
-}).call(this);
+  var promise = new Utils.promise();
+  var Api = require('./api');
+  Api.post('users/authenticate', request, function(response) {
+    if (response === false || response.error) {
+      return promise.send(true);
+    } else {
+      setCurrentUser(response.response.users[0]);
+      return promise.send(false, currentUser);
+    }
+  });
+  return promise;
+};
+
+var Logout = function() {
+  currentUser = undefined;
+  currentUserLoaded = false;
+  return Session.clear();
+};
+
+var RestoreSession = function() {
+  if (Session.get('auth_token')) {
+    return Session.get('user_id');
+  } else {
+    return false;
+  }
+};
+
+var CurrentUser = function(callback) {
+  if (typeof callback !== 'undefined') {
+    var that = this;
+    if (currentUserLoaded === false) {
+      if (typeof Session.get('user_id') === 'undefined') {
+        callback(false);
+      } else {
+        var path = 'users/' + Session.get('user_id');
+        var Api = require('./api');
+        Api.post(path, {}, function(response) {
+          var data = response.response.users[0];
+          that.setCurrentUser(data);
+          callback(data);
+        });
+      }
+    } else {
+      callback(currentUser);
+    }
+  } else {
+    return currentUser;
+  }
+};
+
+var generateSignedURLForFile = function(properties) {
+  var url = '/' + Config.get('application_id');
+  url += '/' + properties.recordEndpoint;
+  url += '/' + properties.recordId;
+  url += '/files';
+  url += '/' + properties.fileId;
+  if (Session.get('auth_token')) {
+    var timestamp = Math.floor(new Date().getTime() / 1000 / (24 * 60 * 60));
+    var sessionId = Session.get('session_id');
+    var authToken = Session.get('auth_token');
+    var signature = this.signString(timestamp + properties.fileId, authToken);
+    url += '?timestamp=' + timestamp;
+    url += '&session_id=' + sessionId;
+    url += '&signature=' + signature;
+  }
+  var host = Config.get('protocol') + '://' + Config.get('host');
+  if (Config.get('port') !== 443 && Config.get('port') !== 80) {
+    host += ':' + Config.get('port');
+  }
+  return host + url;
+};
+
+module.exports = {
+  generateRequest: generateRequest,
+  generateGuid: generateGuid,
+  generateSignedURLForFile: generateSignedURLForFile,
+
+  sortHash: sortHash,
+
+  signString: signString,
+  signRequest: signRequest,
+
+  Authenticate: Authenticate,
+  RestoreSession: RestoreSession,
+
+  setCurrentUser: setCurrentUser,
+
+  CurrentUser: CurrentUser,
+  Logout: Logout,
+};

@@ -1,53 +1,51 @@
+'use strict';
 
-(function() {
-  var Adapter, Blueprint, Config, Data;
+var Data = require('./data');
+var Config = require('./config');
 
-  Data = require('./data');
+/**
+ * Main Entrypoint for Blueprint
+ * @namespace
+ */
+var Blueprint = {};
 
-  Adapter = require('./adapter');
+Blueprint.Init = Config.Init;
 
-  Config = require('./config');
+// Groups
+Blueprint.PublicGroup = Data.Groups.PublicGroup;
+Blueprint.PrivateGroup = Data.Groups.PrivateGroup;
+Blueprint.CreateGroup = Data.Groups.CreateGroup;
+Blueprint.GroupWithId = Data.Groups.GroupWithId;
+Blueprint.Group = Data.Groups.Group;
+// Data
 
-  // Base Structure
-  Blueprint = {};
-  Blueprint.Data = {};
+/**
+ * Used for interacting with records that do not have a model
+ * @namespace
+ */
+Blueprint.Data = {};
 
+Blueprint.Data.Record = Data.Records.Record;
+Blueprint.Data.Find = Data.Records.Find;
+Blueprint.Data.FindOne = Data.Records.FindOne;
 
-  Blueprint.Init = Config.init;
+Blueprint.Model = Data.Models.Model;
 
-  // Groups
-  Blueprint.PublicGroup = Data.PublicGroup;
-  Blueprint.PrivateGroup = Data.PublicGroup;
-  Blueprint.CreateGroup = Data.CreateGroup;
-  Blueprint.GroupWithId = Data.GroupWithId;
+// User
+Blueprint.GetCurrentUser = Data.Users.GetCurrentUser;
+Blueprint.Register = Data.Users.Register;
 
-  // Data
-  Blueprint.Data.CreateRecord = Data.CreateRecord;
-  Blueprint.Data.Find = Data.Find;
-  Blueprint.Data.FindOne = Data.FindOne;
+// Sessions
+Blueprint.Authenticate = Data.Users.Authenticate;
+Blueprint.RestoreSession = Data.Users.RestoreSession;
+Blueprint.Logout = Data.Users.Logout;
 
-  // Models
-  Blueprint.Model = Data.Model;
-
-  // User
-  Blueprint.CurrentUser = Data.CurrentUser;
-  Blueprint.Register = Data.Register;
-
-  // Sessions
-  Blueprint.Authenticate = Adapter.Auth.Authenticate;
-  Blueprint.RestoreSession = Adapter.Auth.RestoreSession;
-  Blueprint.Logout = Adapter.Auth.Logout;
-
-  Blueprint.setCurrentUser = Adapter.Auth.setCurrentUser;
-
-  if (typeof window !== 'undefined') {
-    if (typeof window.Blueprint === 'undefined') {
-      window.Blueprint = Blueprint;
-    } else {
-      module.exports = Blueprint;
-    }
+if (typeof window !== 'undefined') {
+  if (typeof window.Blueprint === 'undefined') {
+    window.Blueprint = Blueprint;
   } else {
     module.exports = Blueprint;
   }
-
-}).call(this);
+} else {
+  module.exports = Blueprint;
+}

@@ -1,5 +1,3 @@
+'use strict';
 
-(function() {
-  module.exports = require('./src');
-
-}).call(this);
+module.exports = require('./src');

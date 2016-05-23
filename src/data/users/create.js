@@ -1,36 +1,34 @@
+'use strict';
 
-(function() {
-  var createUser, Register, session, user, utils;
+var User = require('./user');
+var Auth = require('../../adapter/auth');
+var Utils = require('../../utils');
 
-  user = require('./user');
+/**
+  * Allows you to create a user account
+  * @function Blueprint.Register
+  * @param data {object} - The user object
+  * @returns Promise
+  */
+var Register = function(properties) {
+  var currentUser = require('./current_user');
+  currentUser.Logout();
 
-  session = require('../../adapter');
+  var promise = new Utils.promise();
+  var user = new User({
+    user: properties
+  });
 
-  utils = require('../../utils');
+  user.save().then(function(user) {
+    Auth.setCurrentUser(user.object);
+    promise.send(false, user);
+  }).fail(function(error) {
+    promise.send(error);
+  });
 
-  createUser = function(properties) {
-    return new user(properties);
-  };
+  return promise;
+};
 
-  Register = function(properties) {
-    var user;
-    var promise;
-    promise = new utils.promise;
-    user = createUser({
-      user: properties
-    });
-    user.save().then(function(error, user) {
-      if (!error) {
-        adapter.Auth.setCurrentUser(user._object);
-      }
-      return promise.send(error, user);
-    });
-    return promise;
-  };
-
-  module.exports = {
-    createUser: createUser,
-    Register: Register
-  };
-
-}).call(this);
+module.exports = {
+  Register: Register
+};
