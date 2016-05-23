@@ -41,7 +41,14 @@ Blueprint.RestoreSession = Data.Users.RestoreSession;
 Blueprint.Logout = Data.Users.Logout;
 
 if (typeof window !== 'undefined') {
-  if (typeof window.Blueprint === 'undefined') {
+
+  var hasModule = typeof module !== 'undefined';
+
+  if (hasModule) {
+    hasModule = typeof module.exports !== 'undefined';
+  }
+
+  if (window.Blueprint === false || !hasModule) {
     window.Blueprint = Blueprint;
   } else {
     module.exports = Blueprint;
