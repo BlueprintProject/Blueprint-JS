@@ -9,10 +9,21 @@ var bulkRequests = [];
 var bulkRequestMasterTimer = void 0;
 var bulkRequestIncrementalTimer = void 0;
 
+var endsWith = function(string, suffix) {
+  return string.indexOf(suffix, string.length - suffix.length) !== -1;
+};
+
 module.exports = {
-  post: function(path, data, callback) {
+  post: function(path, data, callback, prohibitBulk) {
     var options = this.buildOptions('POST', path, data);
-    return this.sendRequestAllowBulk(options, data, callback);
+
+    prohibitBulk = true;
+
+    if (!prohibitBulk && endsWith(path, '/query')) {
+      return this.sendRequestAllowBulk(options, data, callback);
+    } else {
+      return this.sendRequest(options, data, callback);
+    }
   },
 
   put: function(path, data, callback) {

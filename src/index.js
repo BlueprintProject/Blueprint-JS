@@ -2,7 +2,7 @@
 
 var Data = require('./data');
 var Config = require('./config');
-
+var Utils = require('./utils');
 /**
  * Main Entrypoint for Blueprint
  * @namespace
@@ -40,6 +40,8 @@ Blueprint.Authenticate = Data.Users.Authenticate;
 Blueprint.RestoreSession = Data.Users.RestoreSession;
 Blueprint.Logout = Data.Users.Logout;
 
+Blueprint.Promise = Utils.promise;
+
 if (typeof window !== 'undefined') {
 
   var hasModule = typeof module !== 'undefined';
@@ -48,7 +50,7 @@ if (typeof window !== 'undefined') {
     hasModule = typeof module.exports !== 'undefined';
   }
 
-  if (window.Blueprint === false || !hasModule) {
+  if (window.Blueprint !== false || !hasModule) {
     window.Blueprint = Blueprint;
   } else {
     module.exports = Blueprint;

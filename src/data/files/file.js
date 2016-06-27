@@ -16,19 +16,27 @@ var adapter = require('../../adapter');
  * })
  * @returns File
  */
-var File = function(name, record, data) {
-  var properties = {
-    name: name
-  };
+var File = function(obj, record, data) {
+  var properties;
+
+  if (typeof obj === 'string') {
+    properties = {
+      name: obj
+    };
+  } else {
+    properties = obj;
+  }
 
   this.isBlueprintObject = true;
   this.endpoint = record.endpoint;
-  properties.recordId = record.get('id');
+  properties.record_id = record.get('id'); // jshint ignore: line
   if (data && properties.size === void 0) {
-    properties.size = data.length;
+    properties.size = data.size ? data.size : data.length;
   }
   this.data = data;
   this.object = properties;
+  this.record = record;
+
   return this;
 };
 
@@ -49,7 +57,7 @@ File.prototype.get = function(key) {
 File.prototype.save = function() {
   var promise = new utils.promise();
   var that = this;
-  var path = this.endpoint + '/' + this.get('record_id') + '/files';
+  var path = this.endpoint + '/' + this.getRecordId() + '/files';
 
   adapter.Records.writeWithCustomPath(path, 'files', {
     file: this.object
@@ -59,34 +67,38 @@ File.prototype.save = function() {
 
       that.object = data;
 
-      var req = data.upload_request; // jshint ignore:line
+      if (that.data) {
+        var req = data.upload_request; // jshint ignore:line
 
-      var params = req.params;
-      params.file = that.data;
+        var params = req.params;
+        params.file = that.data;
 
-      var formData = new FormData();
+        var formData = new FormData();
 
-      for (var key in params) {
-        var value = params[key];
-        formData.append(key, value);
-      }
-
-      var xmlhttp;
-
-      if (window.XMLHttpRequest) {
-        xmlhttp = new XMLHttpRequest();
-      } else {
-        xmlhttp = new ActiveXObject('Microsoft.XMLHTTP'); // jshint ignore:line
-      }
-
-      xmlhttp.onreadystatechange = function() {
-        if (xmlhttp.readyState === 4) {
-          return promise.send(false, that);
+        for (var key in params) {
+          var value = params[key];
+          formData.append(key, value);
         }
-      };
 
-      xmlhttp.open('post', req.url);
-      return xmlhttp.send(formData);
+        var xmlhttp;
+
+        if (window.XMLHttpRequest) {
+          xmlhttp = new XMLHttpRequest();
+        } else {
+          xmlhttp = new ActiveXObject('Microsoft.XMLHTTP'); // jshint ignore:line
+        }
+
+        xmlhttp.onreadystatechange = function() {
+          if (xmlhttp.readyState === 4) {
+            return promise.send(false, that);
+          }
+        };
+
+        xmlhttp.open('post', req.url);
+        xmlhttp.send(formData);
+      } else {
+        return promise.send(false, that);
+      }
     }
   });
   return promise;
@@ -114,13 +126,28 @@ File.prototype.destroy = function() {
  * @function File#getURL
  */
 File.prototype.getURL = function() {
-  var file = {
-    'file_id': this.get('id'),
-    'record_id': this.get('record_id'),
-    'record_endpoint': this.endpoint
-  };
+  var presignedURL = this.get('presigned_url');
+  var valid = this.get('presigned_expiration') > ((new Date()) / 1000);
 
-  return adapter.Auth.generateSignedURLForFile(file);
+  if (presignedURL && valid) {
+    return this.get('presigned_url');
+  } else {
+    var file = {
+      'file_id': this.get('id'),
+      'record_id': this.get('record_id'),
+      'record_endpoint': this.endpoint
+    };
+
+    return adapter.Auth.generateSignedURLForFile(file);
+  }
+};
+
+File.prototype.getRecordId = function() {
+  if (this.record) {
+    return this.record.get('id');
+  } else {
+    return this.get('record_id');
+  }
 };
 
 module.exports = File;

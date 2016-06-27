@@ -22,7 +22,7 @@ module.exports = function(id) {
     var data = response.response.users[0];
     var user = new User(data);
     promise.send(false, user);
-  });
+  }, true);
 
   return promise;
 };

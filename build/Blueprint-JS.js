@@ -10,10 +10,21 @@ var bulkRequests = [];
 var bulkRequestMasterTimer = void 0;
 var bulkRequestIncrementalTimer = void 0;
 
+var endsWith = function(string, suffix) {
+  return string.indexOf(suffix, string.length - suffix.length) !== -1;
+};
+
 module.exports = {
-  post: function(path, data, callback) {
+  post: function(path, data, callback, prohibitBulk) {
     var options = this.buildOptions('POST', path, data);
-    return this.sendRequestAllowBulk(options, data, callback);
+
+    prohibitBulk = true;
+
+    if (!prohibitBulk && endsWith(path, '/query')) {
+      return this.sendRequestAllowBulk(options, data, callback);
+    } else {
+      return this.sendRequest(options, data, callback);
+    }
   },
 
   put: function(path, data, callback) {
@@ -318,7 +329,7 @@ var CurrentUser = function(callback) {
 };
 
 var generateSignedURLForFile = function(properties) {
-  var url = '/' + Config.get('application_id');
+  var url = '/' + Config.get('applicationId');
   url += '/' + properties.recordEndpoint;
   url += '/' + properties.recordId;
   url += '/files';
@@ -514,19 +525,27 @@ var adapter = require(7);
  * })
  * @returns File
  */
-var File = function(name, record, data) {
-  var properties = {
-    name: name
-  };
+var File = function(obj, record, data) {
+  var properties;
+
+  if (typeof obj === 'string') {
+    properties = {
+      name: obj
+    };
+  } else {
+    properties = obj;
+  }
 
   this.isBlueprintObject = true;
   this.endpoint = record.endpoint;
-  properties.recordId = record.get('id');
+  properties.record_id = record.get('id'); // jshint ignore: line
   if (data && properties.size === void 0) {
-    properties.size = data.length;
+    properties.size = data.size ? data.size : data.length;
   }
   this.data = data;
   this.object = properties;
+  this.record = record;
+
   return this;
 };
 
@@ -547,7 +566,7 @@ File.prototype.get = function(key) {
 File.prototype.save = function() {
   var promise = new utils.promise();
   var that = this;
-  var path = this.endpoint + '/' + this.get('record_id') + '/files';
+  var path = this.endpoint + '/' + this.getRecordId() + '/files';
 
   adapter.Records.writeWithCustomPath(path, 'files', {
     file: this.object
@@ -557,34 +576,38 @@ File.prototype.save = function() {
 
       that.object = data;
 
-      var req = data.upload_request; // jshint ignore:line
+      if (that.data) {
+        var req = data.upload_request; // jshint ignore:line
 
-      var params = req.params;
-      params.file = that.data;
+        var params = req.params;
+        params.file = that.data;
 
-      var formData = new FormData();
+        var formData = new FormData();
 
-      for (var key in params) {
-        var value = params[key];
-        formData.append(key, value);
-      }
-
-      var xmlhttp;
-
-      if (window.XMLHttpRequest) {
-        xmlhttp = new XMLHttpRequest();
-      } else {
-        xmlhttp = new ActiveXObject('Microsoft.XMLHTTP'); // jshint ignore:line
-      }
-
-      xmlhttp.onreadystatechange = function() {
-        if (xmlhttp.readyState === 4) {
-          return promise.send(false, that);
+        for (var key in params) {
+          var value = params[key];
+          formData.append(key, value);
         }
-      };
 
-      xmlhttp.open('post', req.url);
-      return xmlhttp.send(formData);
+        var xmlhttp;
+
+        if (window.XMLHttpRequest) {
+          xmlhttp = new XMLHttpRequest();
+        } else {
+          xmlhttp = new ActiveXObject('Microsoft.XMLHTTP'); // jshint ignore:line
+        }
+
+        xmlhttp.onreadystatechange = function() {
+          if (xmlhttp.readyState === 4) {
+            return promise.send(false, that);
+          }
+        };
+
+        xmlhttp.open('post', req.url);
+        xmlhttp.send(formData);
+      } else {
+        return promise.send(false, that);
+      }
     }
   });
   return promise;
@@ -612,13 +635,28 @@ File.prototype.destroy = function() {
  * @function File#getURL
  */
 File.prototype.getURL = function() {
-  var file = {
-    'file_id': this.get('id'),
-    'record_id': this.get('record_id'),
-    'record_endpoint': this.endpoint
-  };
+  var presignedURL = this.get('presigned_url');
+  var valid = this.get('presigned_expiration') > ((new Date()) / 1000);
 
-  return adapter.Auth.generateSignedURLForFile(file);
+  if (presignedURL && valid) {
+    return this.get('presigned_url');
+  } else {
+    var file = {
+      'file_id': this.get('id'),
+      'record_id': this.get('record_id'),
+      'record_endpoint': this.endpoint
+    };
+
+    return adapter.Auth.generateSignedURLForFile(file);
+  }
+};
+
+File.prototype.getRecordId = function() {
+  if (this.record) {
+    return this.record.get('id');
+  } else {
+    return this.get('record_id');
+  }
 };
 
 module.exports = File;
@@ -949,14 +987,13 @@ Data.Users.Logout = Users.Logout;
 
 // Creating Users
 Data.Users.Register = Users.Register;
-Data.Users.Model = Models;
 
 // Creating Sessions
 Data.Users.Authenticate = Users.Authenticate;
 Data.Users.RestoreSession = Users.RestoreSession;
 
 Data.Models = {};
-Data.Models.Model = Models.Model;
+Data.Models.Model = Models;
 
 module.exports = Data;
 
@@ -1009,11 +1046,21 @@ var Model = function(name, instanceCode) {
     return instanceCode.call(obj);
   };
 
-  var constructor = function(baseData) {
-    var object = modelify(require(19).create(name, {}), inject);
-    if (baseData) {
-      object.update(baseData);
+  var constructor = function(baseData, preNested) {
+    var Record = require(20);
+
+    var object;
+
+    if (preNested) {
+      object = modelify(new Record(name, baseData, true), inject);
+    } else {
+      object = modelify(new Record(name, {}), inject);
+
+      if (baseData) {
+        object.update(baseData);
+      }
     }
+
     return object;
   };
 
@@ -1060,7 +1107,7 @@ var Model = function(name, instanceCode) {
 
 module.exports = Model;
 
-},{"18":18,"19":19,"34":34}],18:[function(require,module,exports){
+},{"18":18,"20":20,"34":34}],18:[function(require,module,exports){
 'use strict';
 var Record = require(20);
 var Utils = require(34);
@@ -1166,8 +1213,10 @@ var Record = function(endpoint, object, preNested) {
 
   if (preNested) {
     this.object = object;
+    this._serverObjectContent = JSON.stringify(object.content);
   } else {
     this.object = {};
+    this._serverObjectContent = JSON.stringify(object);
     this.object.content = object;
   }
 
@@ -1195,8 +1244,8 @@ var Record = function(endpoint, object, preNested) {
   if (typeof this.object.files !== 'undefined') {
     for (var i in this.object.files) {
       var f = this.object.files[i];
-      var Files = require(11);
-      this.files[f.name] = new Files.createFile(f, this);
+      var File = require(10);
+      this.files[f.name] = new File(f, this);
     }
   }
 
@@ -1357,6 +1406,7 @@ Record.prototype.save = function() {
       promise.send(true, that.object);
     } else {
       that.object = returnData;
+      that._serverObjectContent = JSON.stringify(returnData.content);
       promise.send(false, that);
     }
   });
@@ -1402,6 +1452,16 @@ Record.prototype.trigger = function() {
 };
 
 /**
+  * Tests to see if the local object has been modified
+  * @function Blueprint.Data.Record#didChange
+  * @returns Boolean
+  */
+Record.prototype.didChange = function() {
+  var localObjectContent = JSON.stringify(this.object.content);
+  return localObjectContent !== this._serverObjectContent;
+};
+
+/**
   * Allows you to subclass this class
   * @function Blueprint.Data.Record.Extend
   * @returns Blueprint.Data.Record
@@ -1414,7 +1474,7 @@ Record.extend = function(object) {
 
 module.exports = Record;
 
-},{"11":11,"34":34,"7":7}],21:[function(require,module,exports){
+},{"10":10,"11":11,"34":34,"7":7}],21:[function(require,module,exports){
 'use strict';
 
 var Auth = require(6);
@@ -1577,7 +1637,7 @@ module.exports = function(id) {
     var data = response.response.users[0];
     var user = new User(data);
     promise.send(false, user);
-  });
+  }, true);
 
   return promise;
 };
@@ -1709,7 +1769,7 @@ module.exports = User;
 
 var Data = require(15);
 var Config = require(9);
-
+var Utils = require(34);
 /**
  * Main Entrypoint for Blueprint
  * @namespace
@@ -1747,8 +1807,17 @@ Blueprint.Authenticate = Data.Users.Authenticate;
 Blueprint.RestoreSession = Data.Users.RestoreSession;
 Blueprint.Logout = Data.Users.Logout;
 
+Blueprint.Promise = Utils.promise;
+
 if (typeof window !== 'undefined') {
-  if (typeof window.Blueprint === 'undefined') {
+
+  var hasModule = typeof module !== 'undefined';
+
+  if (hasModule) {
+    hasModule = typeof module.exports !== 'undefined';
+  }
+
+  if (window.Blueprint !== false || !hasModule) {
     window.Blueprint = Blueprint;
   } else {
     module.exports = Blueprint;
@@ -1757,7 +1826,7 @@ if (typeof window !== 'undefined') {
   module.exports = Blueprint;
 }
 
-},{"15":15,"9":9}],28:[function(require,module,exports){
+},{"15":15,"34":34,"9":9}],28:[function(require,module,exports){
 'use strict';
 
 var currentSession;

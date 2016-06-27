@@ -155,7 +155,7 @@ var CurrentUser = function(callback) {
 };
 
 var generateSignedURLForFile = function(properties) {
-  var url = '/' + Config.get('application_id');
+  var url = '/' + Config.get('applicationId');
   url += '/' + properties.recordEndpoint;
   url += '/' + properties.recordId;
   url += '/files';

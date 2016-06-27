@@ -22,8 +22,10 @@ var Record = function(endpoint, object, preNested) {
 
   if (preNested) {
     this.object = object;
+    this._serverObjectContent = JSON.stringify(object.content);
   } else {
     this.object = {};
+    this._serverObjectContent = JSON.stringify(object);
     this.object.content = object;
   }
 
@@ -51,8 +53,8 @@ var Record = function(endpoint, object, preNested) {
   if (typeof this.object.files !== 'undefined') {
     for (var i in this.object.files) {
       var f = this.object.files[i];
-      var Files = require('../files');
-      this.files[f.name] = new Files.createFile(f, this);
+      var File = require('../files/file');
+      this.files[f.name] = new File(f, this);
     }
   }
 
@@ -213,6 +215,7 @@ Record.prototype.save = function() {
       promise.send(true, that.object);
     } else {
       that.object = returnData;
+      that._serverObjectContent = JSON.stringify(returnData.content);
       promise.send(false, that);
     }
   });
@@ -255,6 +258,16 @@ Record.prototype.trigger = function() {
     }
   });
   return promise;
+};
+
+/**
+  * Tests to see if the local object has been modified
+  * @function Blueprint.Data.Record#didChange
+  * @returns Boolean
+  */
+Record.prototype.didChange = function() {
+  var localObjectContent = JSON.stringify(this.object.content);
+  return localObjectContent !== this._serverObjectContent;
 };
 
 /**

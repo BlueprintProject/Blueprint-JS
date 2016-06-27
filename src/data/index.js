@@ -32,13 +32,12 @@ Data.Users.Logout = Users.Logout;
 
 // Creating Users
 Data.Users.Register = Users.Register;
-Data.Users.Model = Models;
 
 // Creating Sessions
 Data.Users.Authenticate = Users.Authenticate;
 Data.Users.RestoreSession = Users.RestoreSession;
 
 Data.Models = {};
-Data.Models.Model = Models.Model;
+Data.Models.Model = Models;
 
 module.exports = Data;

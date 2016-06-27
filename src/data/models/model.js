@@ -41,11 +41,21 @@ var Model = function(name, instanceCode) {
     return instanceCode.call(obj);
   };
 
-  var constructor = function(baseData) {
-    var object = modelify(require('../records').create(name, {}), inject);
-    if (baseData) {
-      object.update(baseData);
+  var constructor = function(baseData, preNested) {
+    var Record = require('../records/record');
+
+    var object;
+
+    if (preNested) {
+      object = modelify(new Record(name, baseData, true), inject);
+    } else {
+      object = modelify(new Record(name, {}), inject);
+
+      if (baseData) {
+        object.update(baseData);
+      }
     }
+
     return object;
   };
 
