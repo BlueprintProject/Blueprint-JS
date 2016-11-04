@@ -67,7 +67,7 @@ var Model = function(name, instanceCode) {
    * @returns Promise
    */
 
-  constructor.Find = function(where) {
+  constructor.find = function(where) {
     var promise = new utils.promise();
     require('../records/find').Find(name, where).then(function(results) {
       results = modelify(results, inject);
@@ -86,7 +86,7 @@ var Model = function(name, instanceCode) {
    * @returns Promise
    */
 
-  constructor.FindOne = function(where) {
+  constructor.findOne = function(where) {
     var promise = new utils.promise();
     require('../records/find').FindOne(name, where).then(function(result) {
       result = modelify(result, inject);

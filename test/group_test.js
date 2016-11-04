@@ -13,16 +13,16 @@ var handleError = function(error) {
 describe('Groups', function() {
   var prefix = Date.now().toString();
   before(function(done) {
-    Blueprint.Init({
+    Blueprint.init({
       applicationId: '000000000000000000000001',
       port: 8080
     });
-    Blueprint.Register({
+    Blueprint.register({
       email: prefix + '@test.goblueprint.co',
       password: '1234567890a',
       name: prefix + ' Test User'
     }).then(function() {
-      Blueprint.GetCurrentUser().then(function(user) {
+      Blueprint.getCurrentUser().then(function(user) {
         currentUser = user;
         done();
       }).fail(handleError);

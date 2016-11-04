@@ -17,8 +17,6 @@ module.exports = {
   post: function(path, data, callback, prohibitBulk) {
     var options = this.buildOptions('POST', path, data);
 
-    prohibitBulk = true;
-
     if (!prohibitBulk && endsWith(path, '/query')) {
       return this.sendRequestAllowBulk(options, data, callback);
     } else {
@@ -106,6 +104,7 @@ module.exports = {
     for (var i in bulkRequests) {
       var guid = Auth.generateGuid();
       handlingBulkRequests[i] = bulkRequests[i];
+
       guids.push(guid);
     }
 
@@ -126,7 +125,7 @@ module.exports = {
       var formattedRequests = [];
       for (var guidIndex in guids) {
         var requestGuid = guids[guidIndex];
-        var request = handlingBulkRequests[i];
+        var request = handlingBulkRequests[guidIndex];
         formattedRequests.push({
           endpoint: request.options.path.split('/')[2],
           request: request.data,
@@ -144,6 +143,9 @@ module.exports = {
 
       this.sendRequest(options, data, function(data) {
         if (data && !data.error) {
+
+          var existing;
+
           for (var guid in data.response) {
             var response = data.response[guid];
             var callback = callbacks[guid];
@@ -153,6 +155,8 @@ module.exports = {
               'meta': meta,
               'response': response
             });
+
+            existing = callback;
           }
         } else {
           for (var requestIndex in handlingBulkRequests) {

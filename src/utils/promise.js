@@ -47,13 +47,19 @@ promise = function() {
 
     return this;
   };
-  this.then = function(newCallback) {
+  this.then = function(okCallback, failCallback) {
 
-    this.successCallbacks.push(newCallback);
+    this.successCallbacks.push(okCallback);
+
+    if (failCallback) {
+      this.errorCallbacks.push(failCallback);
+    }
 
     if (this.sent === true) {
-      if (this.data) {
-        newCallback(this.data, this.meta);
+      if (this.data && !this.error) {
+        okCallback(this.data, this.meta);
+      } else if (failCallback) {
+        failCallback(this.error, this.meta);
       }
     }
 

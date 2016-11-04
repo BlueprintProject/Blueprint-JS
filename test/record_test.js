@@ -14,19 +14,19 @@ var handleError = function(error) {
 
 describe('Records', function() {
   before(function(done) {
-    Blueprint.Init({
+    Blueprint.init({
       applicationId: '000000000000000000000001',
       port: 8080
     });
 
-    Blueprint.Register({
+    Blueprint.register({
       email: prefix + '_b@test.goblueprint.co',
       password: '1234567890a',
       name: prefix + ' Test User B'
     }).then(function(user) {
       userB = user;
 
-      Blueprint.Register({
+      Blueprint.register({
         email: prefix + '@test.goblueprint.co',
         password: '1234567890a',
         name: prefix + ' Test User'
@@ -50,9 +50,9 @@ describe('Records', function() {
       'price': 1.99
     });
 
-    record.addReadGroup(Blueprint.PublicGroup());
-    record.addWriteGroup(Blueprint.PrivateGroup());
-    record.addDestroyGroup(Blueprint.PrivateGroup());
+    record.addReadGroup(Blueprint.publicGroup());
+    record.addWriteGroup(Blueprint.privateGroup());
+    record.addDestroyGroup(Blueprint.privateGroup());
 
     record.save().then(function(record) {
       if (!record.get('id')) {
@@ -66,7 +66,7 @@ describe('Records', function() {
   });
 
   it('Can Query Records', function(done) {
-    Blueprint.Data.Find('toys', {
+    Blueprint.Data.find('toys', {
       'kind': 'Rope'
     }).then(function(records) {
       var record;
@@ -86,7 +86,7 @@ describe('Records', function() {
   });
 
   it('Can Query Record and Update it', function(done) {
-    Blueprint.Data.FindOne('toys', {
+    Blueprint.Data.findOne('toys', {
       'timestamp': prefix
     }).then(function(r) {
       record = r;
@@ -129,7 +129,7 @@ describe('Records', function() {
   });
 
   it('Can Query Record and Destroy it', function(done) {
-    Blueprint.Data.FindOne('toys', {
+    Blueprint.Data.findOne('toys', {
       'timestamp': prefix
     }).then(function(record) {
       record.set('title', 'This is a test ' + prefix);

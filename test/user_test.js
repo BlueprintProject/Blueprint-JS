@@ -9,7 +9,7 @@ describe('Users', function() {
   prefix = Date.now().toString();
 
   before(function() {
-    return Blueprint.Init({
+    return Blueprint.init({
       applicationId: '000000000000000000000001',
       port: 8080
     });
@@ -20,7 +20,7 @@ describe('Users', function() {
 
   it('Can Create User', function(done) {
 
-    Blueprint.Register({
+    Blueprint.register({
       email: email,
       password: password,
       name: prefix + ' Test User'
@@ -38,7 +38,7 @@ describe('Users', function() {
 
   it('Can Get Current User', function(done) {
 
-    Blueprint.GetCurrentUser().then(function(user) {
+    Blueprint.getCurrentUser().then(function(user) {
 
       if (user) {
         done();
@@ -50,10 +50,10 @@ describe('Users', function() {
 
   });
 
-  it('Can Logout', function(done) {
-    Blueprint.Logout();
+  it('Can logout', function(done) {
+    Blueprint.logout();
 
-    Blueprint.GetCurrentUser().then(function() {
+    Blueprint.getCurrentUser().then(function() {
       throw Error('Still Logged In');
     }).fail(function() {
       done();
@@ -61,8 +61,8 @@ describe('Users', function() {
 
   });
 
-  it('Can Authenticate', function(done) {
-    Blueprint.Authenticate({
+  it('Can authenticate', function(done) {
+    Blueprint.authenticate({
       email: email,
       password: password
     }).then(function() {
@@ -71,7 +71,7 @@ describe('Users', function() {
   });
 
   it('Can Destory', function(done) {
-    Blueprint.GetCurrentUser().then(function(currentUser) {
+    Blueprint.getCurrentUser().then(function(currentUser) {
       currentUser.destroy().then(function() {
         done();
       }).fail(handleError);

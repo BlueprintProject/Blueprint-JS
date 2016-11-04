@@ -1,10 +1,10 @@
 (function e(t,n,r){function s(o,u){if(!n[o]){if(!t[o]){var a=typeof require=="function"&&require;if(!u&&a)return a(o,!0);if(i)return i(o,!0);var f=new Error("Cannot find module '"+o+"'");throw f.code="MODULE_NOT_FOUND",f}var l=n[o]={exports:{}};t[o][0].call(l.exports,function(e){var n=t[o][1][e];return s(n?n:e)},l,l.exports,e,t,n,r)}return n[o].exports}var i=typeof require=="function"&&require;for(var o=0;o<r.length;o++)s(r[o]);return s})({1:[function(require,module,exports){
 'use strict';
 
-var Config = require(9);
-var Utils = require(34);
+var Config = require(5);
+var Utils = require(30);
 var Auth = require(2);
-var Session = require(28);
+var Session = require(24);
 
 var bulkRequests = [];
 var bulkRequestMasterTimer = void 0;
@@ -17,8 +17,6 @@ var endsWith = function(string, suffix) {
 module.exports = {
   post: function(path, data, callback, prohibitBulk) {
     var options = this.buildOptions('POST', path, data);
-
-    prohibitBulk = true;
 
     if (!prohibitBulk && endsWith(path, '/query')) {
       return this.sendRequestAllowBulk(options, data, callback);
@@ -107,6 +105,7 @@ module.exports = {
     for (var i in bulkRequests) {
       var guid = Auth.generateGuid();
       handlingBulkRequests[i] = bulkRequests[i];
+
       guids.push(guid);
     }
 
@@ -127,7 +126,7 @@ module.exports = {
       var formattedRequests = [];
       for (var guidIndex in guids) {
         var requestGuid = guids[guidIndex];
-        var request = handlingBulkRequests[i];
+        var request = handlingBulkRequests[guidIndex];
         formattedRequests.push({
           endpoint: request.options.path.split('/')[2],
           request: request.data,
@@ -145,6 +144,9 @@ module.exports = {
 
       this.sendRequest(options, data, function(data) {
         if (data && !data.error) {
+
+          var existing;
+
           for (var guid in data.response) {
             var response = data.response[guid];
             var callback = callbacks[guid];
@@ -154,6 +156,8 @@ module.exports = {
               'meta': meta,
               'response': response
             });
+
+            existing = callback;
           }
         } else {
           for (var requestIndex in handlingBulkRequests) {
@@ -171,12 +175,12 @@ module.exports = {
   }
 };
 
-},{"2":2,"28":28,"34":34,"9":9}],2:[function(require,module,exports){
+},{"2":2,"24":24,"30":30,"5":5}],2:[function(require,module,exports){
 'use strict';
 
-var Utils = require(34);
-var Config = require(9);
-var Session = require(28);
+var Utils = require(30);
+var Config = require(5);
+var Session = require(24);
 
 var currentUser = {};
 var currentUserLoaded = false;
@@ -369,7 +373,7 @@ module.exports = {
   Logout: Logout,
 };
 
-},{"1":1,"28":28,"34":34,"9":9}],3:[function(require,module,exports){
+},{"1":1,"24":24,"30":30,"5":5}],3:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -455,17 +459,9 @@ module.exports = {
 };
 
 },{"1":1}],5:[function(require,module,exports){
-arguments[4][1][0].apply(exports,arguments)
-},{"1":1,"28":28,"34":34,"6":6,"9":9}],6:[function(require,module,exports){
-arguments[4][2][0].apply(exports,arguments)
-},{"2":2,"28":28,"34":34,"5":5,"9":9}],7:[function(require,module,exports){
-arguments[4][3][0].apply(exports,arguments)
-},{"3":3,"5":5,"6":6,"8":8}],8:[function(require,module,exports){
-arguments[4][4][0].apply(exports,arguments)
-},{"4":4,"5":5}],9:[function(require,module,exports){
 'use strict';
 
-var extend = require(31);
+var extend = require(27);
 
 /**
  * Config
@@ -506,11 +502,11 @@ config.get = function(key) {
 
 module.exports = config;
 
-},{"31":31}],10:[function(require,module,exports){
+},{"27":27}],6:[function(require,module,exports){
 'use strict';
 
-var utils = require(34);
-var adapter = require(7);
+var utils = require(30);
+var adapter = require(3);
 
 /**
  * Creates a file object to be uploaded to the server. <br>
@@ -570,14 +566,13 @@ File.prototype.save = function() {
 
   adapter.Records.writeWithCustomPath(path, 'files', {
     file: this.object
-  }, function(data) {
+  }, function(response) {
 
-    if (typeof data !== void 0) {
-
-      that.object = data;
+    if (typeof response !== void 0 && response && response.upload_request) { // jshint ignore:line
+      that.object = response;
 
       if (that.data) {
-        var req = data.upload_request; // jshint ignore:line
+        var req = response.upload_request; // jshint ignore:line
 
         var params = req.params;
         params.file = that.data;
@@ -608,6 +603,8 @@ File.prototype.save = function() {
       } else {
         return promise.send(false, that);
       }
+    } else {
+      return promise.send(true);
     }
   });
   return promise;
@@ -661,19 +658,19 @@ File.prototype.getRecordId = function() {
 
 module.exports = File;
 
-},{"34":34,"7":7}],11:[function(require,module,exports){
+},{"3":3,"30":30}],7:[function(require,module,exports){
 'use strict';
 
-var File = require(10);
+var File = require(6);
 
 module.exports.File = File;
 
-},{"10":10}],12:[function(require,module,exports){
+},{"6":6}],8:[function(require,module,exports){
 'use strict';
 
-var Session = require(28);
-var Config = require(9);
-var Group = require(13);
+var Session = require(24);
+var Config = require(5);
+var Group = require(9);
 
 module.exports.PrivateGroup = function() {
   return new Group({
@@ -693,11 +690,11 @@ module.exports.GroupWithId = function(id) {
   });
 };
 
-},{"13":13,"28":28,"9":9}],13:[function(require,module,exports){
+},{"24":24,"5":5,"9":9}],9:[function(require,module,exports){
 'use strict';
 
-var adapter = require(7);
-var utils = require(34);
+var adapter = require(3);
+var utils = require(30);
 
 /**
  * Creates a file object to be uploaded to the server. <br>
@@ -941,24 +938,24 @@ Group.prototype.destroy = function() {
 
 module.exports = Group;
 
-},{"34":34,"7":7}],14:[function(require,module,exports){
+},{"3":3,"30":30}],10:[function(require,module,exports){
 'use strict';
 
-var Find = require(12);
-var Group = require(13);
+var Find = require(8);
+var Group = require(9);
 
 module.exports.Group = Group;
 module.exports.PublicGroup = Find.PublicGroup;
 module.exports.PrivateGroup = Find.PrivateGroup;
 module.exports.GroupWithId = Find.GroupWithId;
 
-},{"12":12,"13":13}],15:[function(require,module,exports){
+},{"8":8,"9":9}],11:[function(require,module,exports){
 'use strict';
 
-var Records = require(19);
-var Groups = require(14);
-var Users = require(25);
-var Models = require(16);
+var Records = require(15);
+var Groups = require(10);
+var Users = require(21);
+var Models = require(12);
 
 /**
  * Used for Interacting With Data
@@ -997,12 +994,12 @@ Data.Models.Model = Models;
 
 module.exports = Data;
 
-},{"14":14,"16":16,"19":19,"25":25}],16:[function(require,module,exports){
+},{"10":10,"12":12,"15":15,"21":21}],12:[function(require,module,exports){
 'use strict';
 
-module.exports = require(17);
+module.exports = require(13);
 
-},{"17":17}],17:[function(require,module,exports){
+},{"13":13}],13:[function(require,module,exports){
 'use strict';
 
 var modelify = function(records, inject) {
@@ -1031,7 +1028,7 @@ var modelify = function(records, inject) {
  */
 
 var Model = function(name, instanceCode) {
-  var utils = require(34);
+  var utils = require(30);
 
   var inject = function(obj) {
     obj.update = function(data) {
@@ -1047,7 +1044,7 @@ var Model = function(name, instanceCode) {
   };
 
   var constructor = function(baseData, preNested) {
-    var Record = require(20);
+    var Record = require(16);
 
     var object;
 
@@ -1072,9 +1069,9 @@ var Model = function(name, instanceCode) {
    * @returns Promise
    */
 
-  constructor.Find = function(where) {
+  constructor.find = function(where) {
     var promise = new utils.promise();
-    require(18).Find(name, where).then(function(results) {
+    require(14).Find(name, where).then(function(results) {
       results = modelify(results, inject);
       return promise.send(void 0, results);
     }).fail(function(error) {
@@ -1091,9 +1088,9 @@ var Model = function(name, instanceCode) {
    * @returns Promise
    */
 
-  constructor.FindOne = function(where) {
+  constructor.findOne = function(where) {
     var promise = new utils.promise();
-    require(18).FindOne(name, where).then(function(result) {
+    require(14).FindOne(name, where).then(function(result) {
       result = modelify(result, inject);
       return promise.send(void 0, result);
     }).fail(function(error) {
@@ -1107,11 +1104,11 @@ var Model = function(name, instanceCode) {
 
 module.exports = Model;
 
-},{"18":18,"20":20,"34":34}],18:[function(require,module,exports){
+},{"14":14,"16":16,"30":30}],14:[function(require,module,exports){
 'use strict';
-var Record = require(20);
-var Utils = require(34);
-var Adapter = require(7);
+var Record = require(16);
+var Utils = require(30);
+var Adapter = require(3);
 
 /**
  * Query the database for records without a model
@@ -1178,21 +1175,21 @@ var FindOne = function(model, query) {
 module.exports.Find = Find;
 module.exports.FindOne = FindOne;
 
-},{"20":20,"34":34,"7":7}],19:[function(require,module,exports){
+},{"16":16,"3":3,"30":30}],15:[function(require,module,exports){
 'use strict';
 
 var records = {};
 
-records.find = require(18);
-records.Record = require(20);
+records.find = require(14);
+records.Record = require(16);
 
 module.exports = records;
 
-},{"18":18,"20":20}],20:[function(require,module,exports){
+},{"14":14,"16":16}],16:[function(require,module,exports){
 'use strict';
 
-var Utils = require(34);
-var Adapter = require(7);
+var Utils = require(30);
+var Adapter = require(3);
 
 /**
  * Creates a new record without a model
@@ -1212,7 +1209,13 @@ var Record = function(endpoint, object, preNested) {
   this.endpoint = endpoint;
 
   if (preNested) {
-    this.object = object;
+    if (object) {
+      this.object = object;
+    } else {
+      this.object = {};
+      this.object.content = {};
+    }
+
     this._serverObjectContent = JSON.stringify(object.content);
   } else {
     this.object = {};
@@ -1244,7 +1247,7 @@ var Record = function(endpoint, object, preNested) {
   if (typeof this.object.files !== 'undefined') {
     for (var i in this.object.files) {
       var f = this.object.files[i];
-      var File = require(10);
+      var File = require(6);
       this.files[f.name] = new File(f, this);
     }
   }
@@ -1260,7 +1263,29 @@ var Record = function(endpoint, object, preNested) {
  * @param value {object} - The value you would like to set
  */
 Record.prototype.set = function(key, value) {
-  this.object.content[key] = value;
+  var keys = key.split(".")
+
+  if(keys.length > 1) {
+    var item = this.object.content;
+
+
+
+    for(var i=0; i < keys.length; i++) {
+      var key = keys[i];
+
+      if(i == keys.length - 1) {
+        item[key] = value;
+      } if(typeof item[key] === 'undefined') {
+        item = item[key] = {};
+      } else {
+        item = item[key];
+      }
+    }
+
+    return value;
+  } else {
+    this.object.content[key] = value;
+  }
 };
 
 /**
@@ -1270,7 +1295,18 @@ Record.prototype.set = function(key, value) {
  * @returns Object
  */
 Record.prototype.get = function(key) {
-  if (key === 'id') {
+  var keys = key.split(".")
+
+  if(keys.length > 1) {
+    var value = this.object.content;
+
+    for(var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      value = value[key]
+    }
+
+    return value;
+  } else if (key === 'id') {
     return this.object[key];
   } else {
     var value = this.object.content[key];
@@ -1369,7 +1405,7 @@ Record.prototype.removeDestroyGroup = function(group) {
   * @param data {blob} - The data you would like to upload
   */
 Record.prototype.createFile = function(name, data) {
-  var Files = require(11);
+  var Files = require(7);
   return new Files.File(name, this, data);
 };
 
@@ -1474,11 +1510,11 @@ Record.extend = function(object) {
 
 module.exports = Record;
 
-},{"10":10,"11":11,"34":34,"7":7}],21:[function(require,module,exports){
+},{"3":3,"30":30,"6":6,"7":7}],17:[function(require,module,exports){
 'use strict';
 
-var Auth = require(6);
-var CurrentUser = require(23);
+var Auth = require(2);
+var CurrentUser = require(19);
 
 /**
   * Allows you to authorize your user account
@@ -1516,12 +1552,12 @@ module.exports = {
   RestoreSession: RestoreSession
 };
 
-},{"23":23,"6":6}],22:[function(require,module,exports){
+},{"19":19,"2":2}],18:[function(require,module,exports){
 'use strict';
 
-var User = require(26);
-var Auth = require(6);
-var Utils = require(34);
+var User = require(22);
+var Auth = require(2);
+var Utils = require(30);
 
 /**
   * Allows you to create a user account
@@ -1530,7 +1566,7 @@ var Utils = require(34);
   * @returns Promise
   */
 var Register = function(properties) {
-  var currentUser = require(23);
+  var currentUser = require(19);
   currentUser.Logout();
 
   var promise = new Utils.promise();
@@ -1552,17 +1588,17 @@ module.exports = {
   Register: Register
 };
 
-},{"23":23,"26":26,"34":34,"6":6}],23:[function(require,module,exports){
+},{"19":19,"2":2,"22":22,"30":30}],19:[function(require,module,exports){
 'use strict';
 
-var Adapter = require(7);
-var Utils = require(34);
+var Adapter = require(3);
+var Utils = require(30);
 
 var cachedUser;
 var cachedUserLoaded;
 
 var setCachedUser = function(currentUserData) {
-  var User = require(26);
+  var User = require(22);
   cachedUser = new User(currentUserData);
   cachedUserLoaded = true;
 };
@@ -1612,13 +1648,13 @@ module.exports = {
   setCachedUser: setCachedUser
 };
 
-},{"26":26,"34":34,"7":7}],24:[function(require,module,exports){
+},{"22":22,"3":3,"30":30}],20:[function(require,module,exports){
 'use strict';
 
-var Adapter = require(7);
-var Utils = require(34);
+var Adapter = require(3);
+var Utils = require(30);
 
-var User = require(26);
+var User = require(22);
 
 /**
   * Allows you to get a user by their id
@@ -1642,14 +1678,14 @@ module.exports = function(id) {
   return promise;
 };
 
-},{"26":26,"34":34,"7":7}],25:[function(require,module,exports){
+},{"22":22,"3":3,"30":30}],21:[function(require,module,exports){
 'use strict';
 
-var Create = require(22);
-var CurrentUser = require(23);
-var Find = require(24);
-var Auth = require(21);
-var User = require(26);
+var Create = require(18);
+var CurrentUser = require(19);
+var Find = require(20);
+var Auth = require(17);
+var User = require(22);
 
 module.exports = {
   // Create
@@ -1667,12 +1703,12 @@ module.exports = {
   FindUserById: Find
 };
 
-},{"21":21,"22":22,"23":23,"24":24,"26":26}],26:[function(require,module,exports){
+},{"17":17,"18":18,"19":19,"20":20,"22":22}],22:[function(require,module,exports){
 'use strict';
 
-var Utils = require(34);
+var Utils = require(30);
 var Adapter = require(3);
-var CurrentUser = require(23);
+var CurrentUser = require(19);
 
 
 /**
@@ -1764,25 +1800,25 @@ User.prototype.save = function() {
 
 module.exports = User;
 
-},{"23":23,"3":3,"34":34}],27:[function(require,module,exports){
+},{"19":19,"3":3,"30":30}],23:[function(require,module,exports){
 'use strict';
 
-var Data = require(15);
-var Config = require(9);
-var Utils = require(34);
+var Data = require(11);
+var Config = require(5);
+var Utils = require(30);
 /**
  * Main Entrypoint for Blueprint
  * @namespace
  */
 var Blueprint = {};
 
-Blueprint.Init = Config.Init;
+Blueprint.init = Config.Init;
 
 // Groups
-Blueprint.PublicGroup = Data.Groups.PublicGroup;
-Blueprint.PrivateGroup = Data.Groups.PrivateGroup;
-Blueprint.CreateGroup = Data.Groups.CreateGroup;
-Blueprint.GroupWithId = Data.Groups.GroupWithId;
+Blueprint.publicGroup = Data.Groups.PublicGroup;
+Blueprint.privateGroup = Data.Groups.PrivateGroup;
+Blueprint.createGroup = Data.Groups.CreateGroup;
+Blueprint.groupWithId = Data.Groups.GroupWithId;
 Blueprint.Group = Data.Groups.Group;
 // Data
 
@@ -1793,19 +1829,19 @@ Blueprint.Group = Data.Groups.Group;
 Blueprint.Data = {};
 
 Blueprint.Data.Record = Data.Records.Record;
-Blueprint.Data.Find = Data.Records.Find;
-Blueprint.Data.FindOne = Data.Records.FindOne;
+Blueprint.Data.find = Data.Records.Find;
+Blueprint.Data.findOne = Data.Records.FindOne;
 
 Blueprint.Model = Data.Models.Model;
 
 // User
-Blueprint.GetCurrentUser = Data.Users.GetCurrentUser;
-Blueprint.Register = Data.Users.Register;
+Blueprint.getCurrentUser = Data.Users.GetCurrentUser;
+Blueprint.register = Data.Users.Register;
 
 // Sessions
-Blueprint.Authenticate = Data.Users.Authenticate;
-Blueprint.RestoreSession = Data.Users.RestoreSession;
-Blueprint.Logout = Data.Users.Logout;
+Blueprint.authenticate = Data.Users.Authenticate;
+Blueprint.restoreSession = Data.Users.RestoreSession;
+Blueprint.logout = Data.Users.Logout;
 
 Blueprint.Promise = Utils.promise;
 
@@ -1826,7 +1862,7 @@ if (typeof window !== 'undefined') {
   module.exports = Blueprint;
 }
 
-},{"15":15,"34":34,"9":9}],28:[function(require,module,exports){
+},{"11":11,"30":30,"5":5}],24:[function(require,module,exports){
 'use strict';
 
 var currentSession;
@@ -1891,7 +1927,7 @@ module.exports = {
   }
 };
 
-},{}],29:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 'use strict';
 
 module.exports = function(alpha) {
@@ -1899,7 +1935,7 @@ module.exports = function(alpha) {
     base = alphabet.length;
   return {
     encodeBigInt: function(enc) {
-      var bigInt = require(30);
+      var bigInt = require(26);
       var remainder = Array(enc.length);
       var bigBase = bigInt.int2bigInt(base, 10);
       var encoded = '';
@@ -1912,7 +1948,7 @@ module.exports = function(alpha) {
   };
 }();
 
-},{"30":30}],30:[function(require,module,exports){
+},{"26":26}],26:[function(require,module,exports){
 /* jshint ignore:start */
 
 digitsStr = '0123456789abcdef';
@@ -2272,7 +2308,7 @@ module.exports = {
 
 /* jshint ignore:end */
 
-},{}],31:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 'use strict';
 
 module.exports = function(target) {
@@ -2285,7 +2321,7 @@ module.exports = function(target) {
   return target;
 };
 
-},{}],32:[function(require,module,exports){
+},{}],28:[function(require,module,exports){
 /*
 Modified for Blueprint by Hunter Dolan 2015
 
@@ -2566,7 +2602,7 @@ module.exports = function (data, key) {
   }());
   return CryptoJS.HmacSHA256(data, key).toString();
 };  /* jshint ignore:end */
-},{}],33:[function(require,module,exports){
+},{}],29:[function(require,module,exports){
 'use strict';
 
 module.exports = {
@@ -2641,19 +2677,19 @@ module.exports = {
   }
 };
 
-},{"undefined":undefined}],34:[function(require,module,exports){
+},{"undefined":undefined}],30:[function(require,module,exports){
 'use strict';
 
 module.exports = {
-  base58: require(29),
-  hmac: require(32),
-  bigInt: require(30),
-  extend: require(31),
-  http: require(33),
-  promise: require(35)
+  base58: require(25),
+  hmac: require(28),
+  bigInt: require(26),
+  extend: require(27),
+  http: require(29),
+  promise: require(31)
 };
 
-},{"29":29,"30":30,"31":31,"32":32,"33":33,"35":35}],35:[function(require,module,exports){
+},{"25":25,"26":26,"27":27,"28":28,"29":29,"31":31}],31:[function(require,module,exports){
 'use strict';
 
 var promise;
@@ -2703,13 +2739,19 @@ promise = function() {
 
     return this;
   };
-  this.then = function(newCallback) {
+  this.then = function(okCallback, failCallback) {
 
-    this.successCallbacks.push(newCallback);
+    this.successCallbacks.push(okCallback);
+
+    if (failCallback) {
+      this.errorCallbacks.push(failCallback);
+    }
 
     if (this.sent === true) {
-      if (this.data) {
-        newCallback(this.data, this.meta);
+      if (this.data && !this.error) {
+        okCallback(this.data, this.meta);
+      } else if (failCallback) {
+        failCallback(this.error, this.meta);
       }
     }
 
@@ -2721,4 +2763,4 @@ promise = function() {
 
 module.exports = promise;
 
-},{}]},{},[27]);
+},{}]},{},[23]);

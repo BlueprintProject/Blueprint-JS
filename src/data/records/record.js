@@ -21,7 +21,13 @@ var Record = function(endpoint, object, preNested) {
   this.endpoint = endpoint;
 
   if (preNested) {
-    this.object = object;
+    if (object) {
+      this.object = object;
+    } else {
+      this.object = {};
+      this.object.content = {};
+    }
+
     this._serverObjectContent = JSON.stringify(object.content);
   } else {
     this.object = {};
@@ -69,7 +75,29 @@ var Record = function(endpoint, object, preNested) {
  * @param value {object} - The value you would like to set
  */
 Record.prototype.set = function(key, value) {
-  this.object.content[key] = value;
+  var keys = key.split(".")
+
+  if(keys.length > 1) {
+    var item = this.object.content;
+
+
+
+    for(var i=0; i < keys.length; i++) {
+      var key = keys[i];
+
+      if(i == keys.length - 1) {
+        item[key] = value;
+      } if(typeof item[key] === 'undefined') {
+        item = item[key] = {};
+      } else {
+        item = item[key];
+      }
+    }
+
+    return value;
+  } else {
+    this.object.content[key] = value;
+  }
 };
 
 /**
@@ -79,7 +107,18 @@ Record.prototype.set = function(key, value) {
  * @returns Object
  */
 Record.prototype.get = function(key) {
-  if (key === 'id') {
+  var keys = key.split(".")
+
+  if(keys.length > 1) {
+    var value = this.object.content;
+
+    for(var i = 0; i < keys.length; i++) {
+      var key = keys[i];
+      value = value[key]
+    }
+
+    return value;
+  } else if (key === 'id') {
     return this.object[key];
   } else {
     var value = this.object.content[key];

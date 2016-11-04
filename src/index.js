@@ -9,13 +9,13 @@ var Utils = require('./utils');
  */
 var Blueprint = {};
 
-Blueprint.Init = Config.Init;
+Blueprint.init = Config.Init;
 
 // Groups
-Blueprint.PublicGroup = Data.Groups.PublicGroup;
-Blueprint.PrivateGroup = Data.Groups.PrivateGroup;
-Blueprint.CreateGroup = Data.Groups.CreateGroup;
-Blueprint.GroupWithId = Data.Groups.GroupWithId;
+Blueprint.publicGroup = Data.Groups.PublicGroup;
+Blueprint.privateGroup = Data.Groups.PrivateGroup;
+Blueprint.createGroup = Data.Groups.CreateGroup;
+Blueprint.groupWithId = Data.Groups.GroupWithId;
 Blueprint.Group = Data.Groups.Group;
 // Data
 
@@ -26,19 +26,19 @@ Blueprint.Group = Data.Groups.Group;
 Blueprint.Data = {};
 
 Blueprint.Data.Record = Data.Records.Record;
-Blueprint.Data.Find = Data.Records.Find;
-Blueprint.Data.FindOne = Data.Records.FindOne;
+Blueprint.Data.find = Data.Records.Find;
+Blueprint.Data.findOne = Data.Records.FindOne;
 
 Blueprint.Model = Data.Models.Model;
 
 // User
-Blueprint.GetCurrentUser = Data.Users.GetCurrentUser;
-Blueprint.Register = Data.Users.Register;
+Blueprint.getCurrentUser = Data.Users.GetCurrentUser;
+Blueprint.register = Data.Users.Register;
 
 // Sessions
-Blueprint.Authenticate = Data.Users.Authenticate;
-Blueprint.RestoreSession = Data.Users.RestoreSession;
-Blueprint.Logout = Data.Users.Logout;
+Blueprint.authenticate = Data.Users.Authenticate;
+Blueprint.restoreSession = Data.Users.RestoreSession;
+Blueprint.logout = Data.Users.Logout;
 
 Blueprint.Promise = Utils.promise;
 

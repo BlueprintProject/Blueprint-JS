@@ -1,0 +1,315 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <title>JSDoc: Source: data/records/record.js</title>
+
+    <script src="scripts/prettify/prettify.js"> </script>
+    <script src="scripts/prettify/lang-css.js"> </script>
+    <!--[if lt IE 9]>
+      <script src="//html5shiv.googlecode.com/svn/trunk/html5.js"></script>
+    <![endif]-->
+    <link type="text/css" rel="stylesheet" href="styles/prettify-tomorrow.css">
+    <link type="text/css" rel="stylesheet" href="styles/jsdoc-default.css">
+</head>
+
+<body>
+
+<div id="main">
+
+    <h1 class="page-title">Source: data/records/record.js</h1>
+
+    
+
+
+
+    
+    <section>
+        <article>
+            <pre class="prettyprint source linenums"><code>'use strict';
+
+var Utils = require('../../utils');
+var Adapter = require('../../adapter');
+
+/**
+ * Creates a new record without a model
+ * @name Blueprint.Data.Record
+ * @class
+ * @example
+ * var dog = new Blueprint.Data.Record('pets', {
+ *   species: 'dog',
+ *   name: 'wiley'
+ * });
+ * @returns Blueprint.Model
+ */
+
+var Record = function(endpoint, data) {
+  this.isBlueprintObject = true;
+  this.noContentRoot = false;
+  this.endpoint = endpoint;
+  this.object = data;
+  this.files = {};
+
+  if (typeof this.object.permissions === 'undefined') {
+    this.object.permissions = {};
+  }
+
+  var keys = [
+    'read',
+    'write',
+    'destroy'
+  ];
+
+  for (var index in keys) {
+    if (!isNaN(parseInt(index))) {
+      var key = keys[index] + '_group_ids';
+      if (typeof this.object.permissions[key] === 'undefined') {
+        this.object.permissions[key] = [];
+      }
+    }
+  }
+
+  if (typeof data.files !== 'undefined') {
+    for (var i in data.files) {
+      var f = data.files[i];
+      var Files = require('../files');
+      this.files[f.name] = new Files.createFile(f, this);
+    }
+  }
+
+  return this;
+};
+
+
+/**
+ * Set a value in the object's content
+ * @function Blueprint.Data.Record#set
+ * @param key {string} - The key you would like to set
+ * @param value {object} - The value you would like to set
+ */
+Record.prototype.set = function(key, value) {
+  this.content[key] = value;
+};
+
+/**
+ * Get a value in the object's content
+ * @function Blueprint.Data.Record#get
+ * @param key {string} - The key you would like to get
+ * @returns Object
+ */
+Record.prototype.get = function(key) {
+  if (key === 'id') {
+    return this.object[key];
+  } else {
+    var value = this.content[key];
+    if (!value) {
+      value = this.object[key];
+    }
+    return value;
+  }
+};
+
+/*
+ * Permissions
+ */
+
+Record.prototype.addGroup = function(type, group) {
+  var groupId = group.get('id');
+  var key = type + '_group_ids';
+  this.object.permissions[key].push(groupId);
+};
+
+Record.prototype.removeGroup = function(type, group) {
+  var groupId = group.get('id');
+  var key = type + '_group_ids';
+  if (typeof this.object.permissions === 'object') {
+    if (typeof this.object.permissions[key] === 'object') {
+      var index = this.object.permissions[key].indexOf(groupId);
+      if (index !== -1) {
+        return this.object.permissions[key].splice(index, 1);
+      }
+    }
+  }
+};
+
+/**
+ * Authorize a group to read this record
+ * @function Blueprint.Data.Record#addReadGroup
+ * @param group {Blueprint.Group} - The group you would like to add
+ */
+Record.prototype.addReadGroup = function(group) {
+  return this.addGroup('read', group);
+};
+
+/**
+ * Authorize a group to write to this record
+ * @function Blueprint.Data.Record#addWriteGroup
+ * @param group {Blueprint.Group} - The group you would like to add
+ */
+Record.prototype.addWriteGroup = function(group) {
+  return this.addGroup('write', group);
+};
+
+/**
+ * Authorize a group to destroy this record
+ * @function Blueprint.Data.Record#addDestroyGroup
+ * @param group {Blueprint.Group} - The group you would like to add
+ */
+Record.prototype.addDestroyGroup = function(group) {
+  return this.addGroup('destroy', group);
+};
+
+/**
+ * Deauthorize a group from reading this record
+ * @function Blueprint.Data.Record#removeReadGroup
+ * @param group {Blueprint.Group} - The group you would like to remove
+ */
+Record.prototype.removeReadGroup = function(group) {
+  return this.removeGroup('read', group);
+};
+
+/**
+ * Deauthorize a group from writing to this record
+ * @function Blueprint.Data.Record#removeWriteGroup
+ * @param group {Blueprint.Group} - The group you would like to remove
+ */
+Record.prototype.removeWriteGroup = function(group) {
+  return this.removeGroup('write', group);
+};
+
+/**
+ * Deauthorize a group from destroying this record
+ * @function Blueprint.Data.Record#removeDestroyGroup
+ * @param group {Blueprint.Group} - The group you would like to remove
+ */
+Record.prototype.removeDestroyGroup = function(group) {
+  return this.removeGroup('destroy', group);
+};
+
+/*
+ * Files
+ */
+
+/**
+  * Creates a file object to be uploaded to the server
+  * @function Blueprint.Data.Record#createFile
+  * @param name {string} - The name of the file to upload
+  * @param data {blob} - The data you would like to upload
+  */
+Record.prototype.createFile = function(name, data) {
+  var Files = require('../files');
+  return new Files.File(name, this, data);
+};
+
+/**
+  * Creates a file object to be uploaded to the server
+  * @function Blueprint.Data.Record#getFileWithName
+  * @param fileName {string} - The name of the file to get
+  * @returns File
+  */
+Record.prototype.getFileWithName = function(fileName) {
+  return this.files[fileName];
+};
+
+/**
+  * Saves the record in the database
+  * @function Blueprint.Data.Record#save
+  * @returns Promise
+  */
+Record.prototype.save = function() {
+  var promise = new Utils.promise();
+  var that = this;
+  var data = {
+    id: this.object.id,
+    content: this.object.content,
+    permissions: this.object.permissions
+  };
+
+  if (this.object.user) {
+    data.user = this.object.user;
+  }
+
+  Adapter.Records.write(this.endpoint, data, function(returnData) {
+    if (typeof returnData === 'undefined') {
+      promise.send(true, that.object);
+    } else {
+      that.object = returnData;
+      promise.send(false, that);
+    }
+  });
+
+  return promise;
+};
+
+/**
+  * Removes the record in the database
+  * @function Blueprint.Data.Record#destroy
+  * @returns Promise
+  */
+Record.prototype.destroy = function() {
+  var promise = new Utils.promise();
+
+  Adapter.Records.destroy(this.endpoint, this.get('id'), function(data) {
+    if (typeof data === 'undefined') {
+      promise.send(true);
+    } else {
+      promise.send(false);
+    }
+  });
+
+  return promise;
+};
+
+/**
+  * Triggers an update notification for the record
+  * @function Blueprint.Data.Record#trigger
+  * @returns Promise
+  */
+Record.prototype.trigger = function() {
+  var promise = new Utils.promise();
+
+  Adapter.Records.trigger(this.endpoint, this.get('id'), function(data) {
+    if (typeof data === 'undefined') {
+      promise.send(true);
+    } else {
+      promise.send(false);
+    }
+  });
+  return promise;
+};
+
+/**
+  * Allows you to subclass this class
+  * @function Blueprint.Data.Record.Extend
+  * @returns Blueprint.Data.Record
+  * @param object {object} - The object you would like to inject
+  */
+Record.extend = function(object) {
+  object.prototype = Utils.extend(this.prototype, object.prototype);
+  return object;
+};
+
+module.exports = Record;
+</code></pre>
+        </article>
+    </section>
+
+
+
+
+</div>
+
+<nav>
+    <h2><a href="index.html">Home</a></h2><h3>Classes</h3><ul><li><a href="Blueprint.Data.Record.html">Record</a></li><li><a href="Blueprint.Model.html">Model</a></li><li><a href="Blueprint.User.html">User</a></li><li><a href="File.html">File</a></li><li><a href="Group.html">Group</a></li></ul><h3>Namespaces</h3><ul><li><a href="Blueprint.html">Blueprint</a></li><li><a href="Blueprint.Data.html">Data</a></li></ul>
+</nav>
+
+<br class="clear">
+
+<footer>
+    Documentation generated by <a href="https://github.com/jsdoc3/jsdoc">JSDoc 3.4.0</a> on Fri May 20 2016 18:31:47 GMT-0500 (CDT)
+</footer>
+
+<script> prettyPrint(); </script>
+<script src="scripts/linenumber.js"> </script>
+</body>
+</html>

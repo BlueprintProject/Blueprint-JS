@@ -61,14 +61,13 @@ File.prototype.save = function() {
 
   adapter.Records.writeWithCustomPath(path, 'files', {
     file: this.object
-  }, function(data) {
+  }, function(response) {
 
-    if (typeof data !== void 0) {
-
-      that.object = data;
+    if (typeof response !== void 0 && response && response.upload_request) { // jshint ignore:line
+      that.object = response;
 
       if (that.data) {
-        var req = data.upload_request; // jshint ignore:line
+        var req = response.upload_request; // jshint ignore:line
 
         var params = req.params;
         params.file = that.data;
@@ -99,6 +98,8 @@ File.prototype.save = function() {
       } else {
         return promise.send(false, that);
       }
+    } else {
+      return promise.send(true);
     }
   });
   return promise;
