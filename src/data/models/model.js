@@ -1,19 +1,5 @@
 'use strict';
 
-var modelify = function(records, inject) {
-  if (records.isBlueprintObject) {
-    inject(records);
-    return records;
-  } else {
-    var modeledRecords = [];
-    records.forEach(function(v) {
-      inject(v);
-      return modeledRecords.push(v);
-    });
-    return modeledRecords;
-  }
-};
-
 /**
  * Creates a new record without a model
  * @name Blueprint.Model
@@ -25,39 +11,72 @@ var modelify = function(records, inject) {
  * @returns Blueprint.Model
  */
 
-var Model = function(name, instanceCode) {
+var Model = function(name, arg1, arg2) {
+  var instanceCode = false;
+  var modelStructure = false;
+
+  if(typeof arg1 === 'function') {
+   instanceCode = arg1;
+  } else if(typeof arg1 === 'object') {
+   modelStructure = arg1;
+  }
+
+  if(typeof arg2 === 'function') {
+   instanceCode = arg2;
+  }
+
   var utils = require('../../utils');
 
   var inject = function(obj) {
-    obj.update = function(data) {
-      var results1 = [];
-      for (var key in data) {
-        var value = data[key];
-        results1.push(obj.set(key, value));
-      }
-      return results1;
-    };
-
-    return instanceCode.call(obj);
+   console.log(instanceCode);
+   if(instanceCode === false) {
+     return obj;
+   } else {
+     return instanceCode.call(obj);
+   }
   };
 
   var constructor = function(baseData, preNested) {
     var Record = require('../records/record');
 
-    var object;
+    var recordObject;
 
     if (preNested) {
-      object = modelify(new Record(name, baseData, true), inject);
+      recordObject = new Record(name, baseData, true);
     } else {
-      object = modelify(new Record(name, {}), inject);
+      recordObject = new Record(name, {});
 
       if (baseData) {
-        object.update(baseData);
+        recordObject.update(baseData);
       }
     }
 
-    return object;
+    this._record = recordObject;
+    this.isBlueprintObject = true;
+    this.isLoaded = true;
+
+    var createProxy = function(key) {
+      return function() {
+        return this._record[key].apply(this._record, arguments);
+      };
+    }
+
+    for(var _key in this._record) {
+      var key = _key.toString();
+
+      if(typeof this[key] === 'undefined' && typeof this._record[key] === 'function') {
+        this[key] = createProxy(key);
+      }
+    }
+
+    this._keyMap = {};
+
+    if(modelStructure !== false) {
+      createStructure.call(this, modelStructure);
+    }
   };
+
+  inject(constructor);
 
   /**
    * Query the database for records without a model
@@ -70,7 +89,12 @@ var Model = function(name, instanceCode) {
   constructor.find = function(where) {
     var promise = new utils.promise();
     require('../records/find').Find(name, where).then(function(results) {
-      results = modelify(results, inject);
+      var that = this;
+
+      results = results.map(function(result){
+        return new that(result);
+      });
+
       return promise.send(void 0, results);
     }).fail(function(error) {
       return promise.send(error);
@@ -89,13 +113,133 @@ var Model = function(name, instanceCode) {
   constructor.findOne = function(where) {
     var promise = new utils.promise();
     require('../records/find').FindOne(name, where).then(function(result) {
-      result = modelify(result, inject);
+      result = new this(result);
       return promise.send(void 0, result);
     }).fail(function(error) {
       return promise.send(error);
     });
     return promise;
   };
+
+  var createStructure = function(structure) {
+    for(var key in structure) {
+      var item = structure[key];
+
+      if(typeof item === 'function') {
+        item = {type: item};
+      }
+
+      if(typeof this[key] === 'undefined') {
+        // Add the key to the key map
+        var blueprintKey = [key];
+        if(item.key) {
+          blueprintKey = [item.key];
+        } else if(item.protected) {
+          blueprintKey = ['protected'].concat(key);
+        }
+
+        blueprintKey = blueprintKey.join('.');
+
+        item.key = blueprintKey;
+        this._keyMap[key] = item;
+
+        // Map the value
+        ensureKey.call(this, key, true);
+
+      } else {
+        throw 'Key cannot be `'+key+'`, it is an internal blueprint name';
+      }
+    }
+  };
+
+  var ensureKey = function(key, update) {
+    var item = this._keyMap[key];
+
+    if(typeof item === 'object') {
+      var value;
+
+      if(update || typeof this[key] === 'undefined') {
+        value = this._record.get(item.key);
+      } else {
+        value = this[key];
+      }
+
+      if(typeof value === 'undefined') {
+        value = item.default;
+      }
+
+      var typeOkay = true;
+      var expectedType = false;
+
+      switch (item.type) {
+        case String:
+          expectedType = 'string';
+          break;
+        case Number:
+          expectedType = 'number';
+          break;
+        case Object:
+          expectedType = 'object';
+          break;
+        case Boolean:
+          expectedType = 'boolean';
+          break;
+      }
+
+      if(expectedType && typeof value !== 'undefined') {
+        typeOkay = typeof value === expectedType;
+      }
+
+      if(typeOkay) {
+        this[key] = value;
+        this._record.set(item.key, value);
+      } else {
+        console.error('Type for `'+key+'` is `'+typeof value+'` (`'+value+'`) not `'+expectedType+'`');
+      }
+    }
+  }
+
+  constructor.prototype.set = function(key, value) {
+    var result = this._record.set(key, value);
+
+    for(var i in this._keyMap) {
+      var item = this._keyMap[i];
+      if(item.key === key) {
+        ensureKey.call(this, key, true);
+        break;
+      }
+    }
+
+    return result;
+  };
+
+  constructor.prototype.get = function(key) {
+    for(var i in this._keyMap) {
+      var item = this._keyMap[i];
+      if(item.key === key) {
+        ensureKey.call(this, key);
+        break;
+      }
+    }
+
+    return this._record.get(key);
+  };
+
+  constructor.prototype.update = function(object) {
+    this._record.update(object);
+    this.sync();
+  }
+
+  constructor.prototype.save = function() {
+    this.sync();
+    this._record.save();
+  }
+
+  constructor.prototype.sync = function() {
+    for(var key in this._keyMap) {
+      ensureKey.call(this, key);
+    }
+  }
 
   return constructor;
 };

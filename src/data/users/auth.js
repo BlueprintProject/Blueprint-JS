@@ -24,14 +24,24 @@ var Authenticate = function(data) {
   * @function Blueprint.RestoreSession
   * @returns Bool - true if restore was successful
   */
-var RestoreSession = function() {
-  var result = Auth.RestoreSession();
+var RestoreSession = function(callback) {
+  if(callback) {
+    Auth.RestoreSession(function(result) {
+      if (result) {
+        CurrentUser.GetCurrentUser();
+      }
 
-  if (result) {
-    CurrentUser.GetCurrentUser();
+      callback(result);
+    });
+  } else {
+    var result = Auth.RestoreSession();
+
+    if (result) {
+      CurrentUser.GetCurrentUser();
+    }
+
+    return result;
   }
-
-  return result;
 };
 
 module.exports = {

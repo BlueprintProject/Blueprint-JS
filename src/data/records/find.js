@@ -20,6 +20,8 @@ var Adapter = require('../../adapter');
 var Find = function(model, query) {
   var promise = new Utils.promise();
   Adapter.Records.query(model, query, function(data, meta) {
+    //console.log(data, meta, "<<<");
+
     var objects = [];
     if (data) {
       var i = 0;
@@ -30,6 +32,9 @@ var Find = function(model, query) {
         i++;
       }
     }
+
+    //console.log(objects);
+
     promise.send(false, objects, meta);
   });
   return promise;
@@ -55,7 +60,11 @@ var FindOne = function(model, query) {
   query.$limit = 1;
   Adapter.Records.query(model, query, function(data, meta) {
     var object = null;
-    if (data) {
+    if (typeof data !== 'undefined' &&
+      data !== null &&
+      typeof data[0] !== 'undefined' &&
+      typeof data[0].content !== 'undefined') {
+
       object = new Record(model, data[0], true);
       promise.send(false, object, meta);
     } else {

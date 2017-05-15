@@ -13,11 +13,13 @@ var endsWith = function(string, suffix) {
   return string.indexOf(suffix, string.length - suffix.length) !== -1;
 };
 
+var bulkEnabled = true;
+
 module.exports = {
   post: function(path, data, callback, prohibitBulk) {
     var options = this.buildOptions('POST', path, data);
 
-    if (!prohibitBulk && endsWith(path, '/query')) {
+    if (!prohibitBulk && bulkEnabled && endsWith(path, '/query')) {
       return this.sendRequestAllowBulk(options, data, callback);
     } else {
       return this.sendRequest(options, data, callback);
@@ -128,8 +130,8 @@ module.exports = {
         var request = handlingBulkRequests[guidIndex];
         formattedRequests.push({
           endpoint: request.options.path.split('/')[2],
-          request: request.data,
-          guid: requestGuid
+          guid: requestGuid,
+          request: request.data
         });
 
         callbacks[requestGuid] = request.callback;

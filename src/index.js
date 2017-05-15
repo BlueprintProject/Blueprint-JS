@@ -6,7 +6,8 @@ var Utils = require('./utils');
 /**
  * Main Entrypoint for Blueprint
  * @namespace
- */
+**/
+
 var Blueprint = {};
 
 Blueprint.init = Config.Init;
@@ -42,13 +43,20 @@ Blueprint.logout = Data.Users.Logout;
 
 Blueprint.Promise = Utils.promise;
 
-if (typeof window !== 'undefined') {
+if (typeof global !== 'undefined' &&
+    global.navigator &&
+    global.navigator.product === 'ReactNative') {
+
+  module.exports = Blueprint;
+
+} else if (typeof window !== 'undefined') {
 
   var hasModule = typeof module !== 'undefined';
 
   if (hasModule) {
     hasModule = typeof module.exports !== 'undefined';
   }
+
 
   if (window.Blueprint !== false || !hasModule) {
     window.Blueprint = Blueprint;

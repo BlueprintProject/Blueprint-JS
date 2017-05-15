@@ -1,5 +1,36 @@
 'use strict';
 
+var reactRequest = function(options, data, callback) {
+
+  var url = options.protocol + '//' + options.host + ':' + options.port + options.path;
+  var postOptions = {
+    method: options.method,
+    headers: {
+      'Content-Type': 'application/json'
+    },
+    body: data
+  };
+
+  if(global.__DEV__) {
+    //console.log("HTTP Request > ", url, JSON.parse(data), postOptions.method);
+  }
+
+  try {
+    fetch(url, postOptions).then(function(response) {
+      response.json().then(function(response){
+        callback(response);
+      });
+    }).catch(function(){
+      callback();
+    }).done();
+  } catch(e) {
+    callback();
+  }
+
+};
+
+
+
 module.exports = {
   send: function(options, callback, retryCount) {
     var xmlhttp;
@@ -11,36 +42,58 @@ module.exports = {
     var that = this;
     var handled = false;
     function handleRetry() {
-      if (retryCount >= 2 || options.method !== 'POST') {
+
+      if (retryCount >= 10 || options.method !== 'POST' || (options.path.indexOf("/query") === -1 && options.path.indexOf("/users") !== 0)) {
+        console.log("[RECOVERY] RECOVERY FAILED", retryCount, options, url);
         callback();
+      } else if(retryCount > 5) {
+        setTimeout(function(){
+          console.log("[RECOVERY] Request Failed attempting recovery in ", Math.pow(3,retryCount), " ms", url);
+          that.send(options, callback, retryCount + 1);
+        }, Math.pow(3,retryCount));
       } else {
+        console.log("[RECOVERY] Request Failed attempting recovery", url);
         that.send(options, callback, retryCount + 1);
       }
     }
+
     function handle(data) {
       if (!handled) {
         handled = true;
+
         if (data === null || typeof data === 'undefined' || data === '') {
           handleRetry();
         } else {
-          //try {
-          var json = JSON.parse(data);
-          if (json.error) {
+          try {
+
+            if(typeof data === 'string') {
+              data = JSON.parse(data);
+            }
+
+            if (data.error) {
+              handleRetry();
+            } else {
+              callback(data);
+            }
+          } catch (e) {
+            console.log("Failure upon handle callback", e);
             handleRetry();
-          } else {
-            callback(json);
           }
-        //} catch (e) {
-        //  handleRetry();
-        //}
         }
       }
     }
     /* istanbul ignore else  */
-    if (typeof window === 'undefined') {
-      require('./node_request.js')(options, data, handle);
+
+    var isReact = typeof global !== 'undefined' &&
+      global.navigator && global.navigator.product === 'ReactNative';
+
+    if (typeof global !== 'undefined' && !isReact) {
+      var lib = './node_request.js';
+      require(lib)(options, data, handle);
     } else {
-      if (window.XMLHttpRequest) {
+      if(isReact) {
+        xmlhttp = new XMLHttpRequest();
+      } else if (window.XMLHttpRequest) {
         xmlhttp = new XMLHttpRequest();
       } else {
         /* jshint ignore:start */
@@ -67,7 +120,6 @@ module.exports = {
     url += options.host;
     url += ':' + options.port;
     url += options.path;
-    //console.log(url)
     return url;
   }
 };

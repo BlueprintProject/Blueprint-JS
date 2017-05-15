@@ -30,7 +30,11 @@ promise = function() {
     var results = [];
 
     for (var i in callbacks) {
-      results.push(callbacks[i](response, this.meta));
+      try {
+        results.push(callbacks[i](response, this.meta));
+      } catch(e) {
+        console.log('Failure upon send', e);
+      }
     }
 
     return results;
@@ -41,12 +45,19 @@ promise = function() {
 
     if (this.sent === true) {
       if (this.error) {
-        newCallback(this.error, this.meta);
+        try {
+          newCallback(this.data, this.meta);
+        } catch(e) {
+          console.log('Failure upon send', e);
+        }
       }
     }
 
     return this;
   };
+
+  this.catch = this.fail;
+
   this.then = function(okCallback, failCallback) {
 
     this.successCallbacks.push(okCallback);
@@ -57,9 +68,22 @@ promise = function() {
 
     if (this.sent === true) {
       if (this.data && !this.error) {
-        okCallback(this.data, this.meta);
+        try {
+          var result = okCallback(this.data, this.meta);
+
+          if(typeof result !== 'undefined') {
+            this.data = result;
+          }
+
+        } catch(e) {
+          console.log('Failure upon send', e);
+        }
       } else if (failCallback) {
-        failCallback(this.error, this.meta);
+        try {
+          failCallback(this.error, this.meta);
+        } catch(e) {
+          console.log('Failure upon send', e);
+        }
       }
     }
 

@@ -1,12 +1,17 @@
 {
-  "name": "Blueprint-JS",
+  "name": "blueprint",
   "version": "0.0.1",
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "request": "*"
+    "form-data": "^2.1.2",
+    "json-stable-stringify": "^1.0.1",
+    "react-native-code-push": "^1.17.0-beta"
   },
   "devDependencies": {
+    "babel-cli": "^6.24.1",
+    "babel-preset-es2015": "^6.24.1",
+    "babel-preset-es2017": "^6.24.1",
     "browserify": "^9.0.7",
     "bundle-collapser": "^1.1.4",
     "coffeeify": "^2.0.1",

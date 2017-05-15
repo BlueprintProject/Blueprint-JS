@@ -19,12 +19,16 @@ var Record = function(endpoint, object, preNested) {
   this.isBlueprintObject = true;
   this.noContentRoot = false;
   this.endpoint = endpoint;
+  this.isLoaded = true;
 
   if (preNested) {
-    if (object) {
+    if (typeof object !== 'undefined') {
       this.object = object;
     } else {
       this.object = {};
+    }
+
+    if(typeof this.object.content === 'undefined') {
       this.object.content = {};
     }
 
@@ -85,9 +89,9 @@ Record.prototype.set = function(key, value) {
     for(var i=0; i < keys.length; i++) {
       var key = keys[i];
 
-      if(i == keys.length - 1) {
+      if(i === keys.length - 1) {
         item[key] = value;
-      } if(typeof item[key] === 'undefined') {
+      } else if(typeof item[key] === 'undefined') {
         item = item[key] = {};
       } else {
         item = item[key];
@@ -113,8 +117,13 @@ Record.prototype.get = function(key) {
     var value = this.object.content;
 
     for(var i = 0; i < keys.length; i++) {
-      var key = keys[i];
-      value = value[key]
+      if(typeof value === 'undefined' || typeof value[key] === 'undefined') {
+        value = undefined;
+        break;
+      } else {
+        var key = keys[i];
+        value = value[key]
+      }
     }
 
     return value;
@@ -308,6 +317,17 @@ Record.prototype.didChange = function() {
   var localObjectContent = JSON.stringify(this.object.content);
   return localObjectContent !== this._serverObjectContent;
 };
+
+Record.prototype.update = function(data) {
+  var results = [];
+
+  for (var key in data) {
+    var value = data[key];
+    results.push(this.set(key, value));
+  }
+
+  return results;
+}
 
 /**
   * Allows you to subclass this class

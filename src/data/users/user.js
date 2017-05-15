@@ -1,7 +1,7 @@
 'use strict';
 
 var Utils = require('../../utils');
-var Adapter = require('../../Adapter');
+var Adapter = require('../../adapter');
 var CurrentUser = require('./current_user');
 
 

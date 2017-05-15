@@ -1,63 +1,81 @@
 'use strict';
 
-var currentSession;
+var currentSession = {}
 
-var storageGet = function() {
-  if (typeof window !== 'undefined') {
-    return window.localStorage.getItem('__api_session');
+var AsyncStorage;
+
+if (typeof global !== 'undefined' &&
+    global.navigator &&
+    global.navigator.product === 'ReactNative') {
+    var ReactNative = require('react-native');
+    AsyncStorage = ReactNative.AsyncStorage;
+}
+
+var loadSession = function(callback) {
+  /* istanbul ignore else  */
+  if (typeof global !== 'undefined' &&
+      global.navigator &&
+      global.navigator.product === 'ReactNative') {
+      AsyncStorage.getItem('@BlueprintStore:APISession', function(error, value) {
+        if(value) {
+          currentSession = JSON.parse(value);
+        }
+        callback();
+      });
+
+  } else if (typeof window !== 'undefined') {
+    var sessionText = window.localStorage.getItem('__api_session');
+    if(sessionText) {
+      currentSession = JSON.parse(sessionText);
+    }
+
+    callback();
   } else {
-    return currentSession;
+    callback();
   }
 };
 
-var storageSet = function(value) {
-  if (typeof window !== 'undefined') {
-    window.localStorage.setItem('__api_session', value);
-  } else {
-    currentSession = value;
+var saveSession = function() {
+  var jsonValue = JSON.stringify(currentSession);
+
+  if (typeof global !== 'undefined' &&
+      global.navigator &&
+      global.navigator.product === 'ReactNative') {
+      AsyncStorage.setItem('@BlueprintStore:APISession', jsonValue);
+  } else if (typeof window !== 'undefined') {
+    window.localStorage.setItem('__api_session', jsonValue);
   }
 };
 
-var storageClear = function() {
-  if (typeof window !== 'undefined') {
+var clearSession = function() {
+  currentSession = {};
+
+  if (typeof global !== 'undefined' &&
+      global.navigator &&
+      global.navigator.product === 'ReactNative') {
+
+      AsyncStorage.removeItem('@BlueprintStore:APISession');
+  } else if (typeof window !== 'undefined') {
     window.localStorage.removeItem('__api_session');
-  } else {
-    currentSession = void 0;
   }
-};
-
-var getSession = function() {
-  var sessionText = storageGet();
-  var session;
-  if (typeof sessionText !== 'undefined') {
-    session = JSON.parse(sessionText);
-  }
-  if (session) {
-    return session;
-  } else {
-    return {};
-  }
-};
-
-var saveSession = function(session) {
-  var sessionText = JSON.stringify(session);
-  storageSet(sessionText);
 };
 
 module.exports = {
+  load: function(callback) {
+    loadSession(function(){
+      if(callback) {
+        callback();
+      }
+    });
+  },
   get: function(key) {
-    var session;
-    session = getSession();
-    return session[key];
+    return currentSession[key];
   },
   set: function(key, value) {
-    var session;
-    session = getSession();
-    session[key] = value;
-
-    return saveSession(session);
+    currentSession[key] = value;
+    saveSession();
   },
   clear: function() {
-    return storageClear();
+    clearSession();
   }
 };

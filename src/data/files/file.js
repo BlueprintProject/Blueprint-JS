@@ -59,6 +59,9 @@ File.prototype.save = function() {
   var that = this;
   var path = this.endpoint + '/' + this.getRecordId() + '/files';
 
+  this.record.files[this.get('name')] = this;
+  //console.log(this, this.record, this.record, this.get('name'));
+
   adapter.Records.writeWithCustomPath(path, 'files', {
     file: this.object
   }, function(response) {
@@ -67,34 +70,59 @@ File.prototype.save = function() {
       that.object = response;
 
       if (that.data) {
-        var req = response.upload_request; // jshint ignore:line
 
-        var params = req.params;
-        params.file = that.data;
+          var req = response.upload_request; // jshint ignore:line
 
-        var formData = new FormData();
+          var params = req.params;
+          params.file = that.data;
 
-        for (var key in params) {
-          var value = params[key];
-          formData.append(key, value);
-        }
+          var formData;
 
-        var xmlhttp;
-
-        if (window.XMLHttpRequest) {
-          xmlhttp = new XMLHttpRequest();
-        } else {
-          xmlhttp = new ActiveXObject('Microsoft.XMLHTTP'); // jshint ignore:line
-        }
-
-        xmlhttp.onreadystatechange = function() {
-          if (xmlhttp.readyState === 4) {
-            return promise.send(false, that);
+          if (typeof global !== 'undefined') {
+            var FormData = require('form-data');
+            formData = new FormData();
+          } else {
+            formData = new FormData();
           }
-        };
 
-        xmlhttp.open('post', req.url);
-        xmlhttp.send(formData);
+          for (var key in params) {
+            var value = params[key];
+            formData.append(key, value);
+          }
+
+          if (typeof global !== 'undefined') {
+            if(global.navigator &&
+              global.navigator.product === 'ReactNative') {
+                fetch(req.url, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'multipart/form-data',
+                  },
+                  body: formData
+                }).then(function() {
+                  promise.send(false, that);
+                }).catch(function(err) {
+                  //console.log(err);
+                });
+            }
+          } else {
+            var xmlhttp;
+
+            if (window.XMLHttpRequest) {
+              xmlhttp = new XMLHttpRequest();
+            } else {
+              xmlhttp = new ActiveXObject('Microsoft.XMLHTTP'); // jshint ignore:line
+            }
+
+            xmlhttp.onreadystatechange = function() {
+              if (xmlhttp.readyState === 4) {
+                return promise.send(false, that);
+              }
+            };
+
+            xmlhttp.open('post', req.url);
+            xmlhttp.send(formData);
+          }
       } else {
         return promise.send(false, that);
       }

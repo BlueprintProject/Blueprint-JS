@@ -37,6 +37,7 @@ var generateRequest = function(request, path, method) {
     Session.get('auth_token')
   );
 
+
   return request;
 };
 
@@ -55,28 +56,48 @@ var signRequest = function(request, path, method, authToken) {
   string += path;
   string += method;
   request.request = this.sortHash(request.request);
-  string += JSON.stringify(request.request);
+
+  var stringify = require('json-stable-stringify');
+
+  string += stringify(request.request);
+
+  //console.log("[SIGNATURE]", string, request, path, method);
+
   return this.signString(string, authToken);
 };
 
 var sortHash = function(hash) {
-  var keys = [];
-  var newHash = {};
-  for (var hashKey in hash) {
-    if (hash.hasOwnProperty(hashKey)) {
-      keys.push(hashKey);
+  //console.log("Sort", hash);
+  if(Object.prototype.toString.call(hash) === '[object Array]' ) {
+    var that = this;
+
+    return hash.map(function(object) {
+      return that.sortHash(object);
+    });
+  } else {
+    var keys = [];
+    var newHash = {};
+    for (var hashKey in hash) {
+      if (hash.hasOwnProperty(hashKey)) {
+        keys.push(hashKey);
+      }
     }
-  }
-  keys.sort();
-  for (var i in keys) {
-    var key = keys[i];
-    var value = hash[key];
-    if (typeof value === 'object' && value.length === void 0) {
-      value = this.sortHash(value);
+    keys.sort();
+    for (var i in keys) {
+      var key = keys[i];
+      var value = hash[key];
+      var isHash = typeof value === 'object' && value.length === void 0;
+      var isArray = Object.prototype.toString.call(hash) === '[object Array]';
+      if (isHash || isArray) {
+        value = this.sortHash(value);
+      }
+      newHash[key] = value;
     }
-    newHash[key] = value;
+
+    //console.log("Sorted", newHash);
+
+    return newHash;
   }
-  return newHash;
 };
 
 var signString = function(string, token) {
@@ -109,6 +130,7 @@ var Authenticate = function(data) {
   Api.post('users/authenticate', request, function(response) {
     if (response === false || response.error) {
       return promise.send(true);
+
     } else {
       setCurrentUser(response.response.users[0]);
       return promise.send(false, currentUser);
@@ -117,17 +139,27 @@ var Authenticate = function(data) {
   return promise;
 };
 
-var Logout = function() {
+var logout = function() {
   currentUser = undefined;
   currentUserLoaded = false;
   return Session.clear();
 };
 
-var RestoreSession = function() {
-  if (Session.get('auth_token')) {
-    return Session.get('user_id');
+var RestoreSession = function(callback) {
+  if(callback) {
+    Session.load(function() {
+      if (Session.get('auth_token')) {
+        callback(Session.get('user_id'));
+      } else {
+        callback(false);
+      }
+    });
   } else {
-    return false;
+    if (Session.get('auth_token')) {
+      return Session.get('user_id');
+    } else {
+      return false;
+    }
   }
 };
 
@@ -141,9 +173,23 @@ var CurrentUser = function(callback) {
         var path = 'users/' + Session.get('user_id');
         var Api = require('./api');
         Api.post(path, {}, function(response) {
-          var data = response.response.users[0];
-          that.setCurrentUser(data);
-          callback(data);
+
+          try {
+            if(typeof response !== 'undefined' &&
+               typeof response.response !== 'undefined' &&
+              response.response.users.length > 0) {
+                 var data = response.response.users[0];
+                 that.setCurrentUser(data);
+                 callback(data);
+            } else {
+              logout();
+              callback(false);
+            }
+          } catch(e) {
+            logout();
+            callback(false);
+          }
+
         });
       }
     } else {
@@ -192,5 +238,5 @@ module.exports = {
   setCurrentUser: setCurrentUser,
 
   CurrentUser: CurrentUser,
-  Logout: Logout,
+  Logout: logout,
 };

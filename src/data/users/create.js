@@ -3,6 +3,7 @@
 var User = require('./user');
 var Auth = require('../../adapter/auth');
 var Utils = require('../../utils');
+var CurrentUser = require('./current_user');
 
 /**
   * Allows you to create a user account
@@ -21,6 +22,7 @@ var Register = function(properties) {
 
   user.save().then(function(user) {
     Auth.setCurrentUser(user.object);
+    CurrentUser.setCachedUser(user.object);
     promise.send(false, user);
   }).fail(function(error) {
     promise.send(error);
