@@ -4,9 +4,8 @@
   "description": "",
   "main": "index.js",
   "dependencies": {
-    "form-data": "^2.1.2",
-    "json-stable-stringify": "^1.0.1",
-    "react-native-code-push": "^1.17.0-beta"
+    "form-data": "^2.1.4",
+    "json-stable-stringify": "^1.0.1"
   },
   "devDependencies": {
     "babel-cli": "^6.24.1",

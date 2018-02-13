@@ -1,9 +1,8 @@
 'use strict';
 
-// Workaround to make browserify not include this
-var http = require('http');
-
 module.exports = function(options, data, callback) {
+  var workaround_require = require;
+  var http = workaround_require('http');
   // An object of options to indicate where to post to
   var postOptions = {
     host: options.host,
@@ -17,7 +16,7 @@ module.exports = function(options, data, callback) {
   };
   var a = http;
   if (options.protocol === 'https:') {
-    a = require('https');
+    a = workaround_require('https');
   }
   // Set up the request
   var postReq = a.request(postOptions, function(res) {

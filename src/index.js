@@ -53,12 +53,7 @@ if (typeof global !== 'undefined' &&
 
   var hasModule = typeof module !== 'undefined';
 
-  if (hasModule) {
-    hasModule = typeof module.exports !== 'undefined';
-  }
-
-
-  if (window.Blueprint !== false || !hasModule) {
+  if (window.Blueprint === true || !hasModule) {
     window.Blueprint = Blueprint;
   } else {
     module.exports = Blueprint;

@@ -7,8 +7,7 @@ var AsyncStorage;
 if (typeof global !== 'undefined' &&
     global.navigator &&
     global.navigator.product === 'ReactNative') {
-    var ReactNative = require('react-native');
-    AsyncStorage = ReactNative.AsyncStorage;
+    AsyncStorage = require('./utils/asyncstorage');
 }
 
 var loadSession = function(callback) {

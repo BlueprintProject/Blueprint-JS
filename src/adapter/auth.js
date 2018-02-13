@@ -19,7 +19,7 @@ var setCurrentUser = function(user) {
     Session.set('session_id', currentUser.session_id);
   }
 
-// jshint ignore: end
+  // jshint ignore: end
 };
 
 var generateRequest = function(request, path, method) {
@@ -86,7 +86,7 @@ var sortHash = function(hash) {
     for (var i in keys) {
       var key = keys[i];
       var value = hash[key];
-      var isHash = typeof value === 'object' && value.length === void 0;
+      var isHash = typeof value === 'object' && value !== null && value.length === void 0;
       var isArray = Object.prototype.toString.call(hash) === '[object Array]';
       if (isHash || isArray) {
         value = this.sortHash(value);

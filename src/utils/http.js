@@ -87,9 +87,10 @@ module.exports = {
     var isReact = typeof global !== 'undefined' &&
       global.navigator && global.navigator.product === 'ReactNative';
 
-    if (typeof global !== 'undefined' && !isReact) {
-      var lib = './node_request.js';
-      require(lib)(options, data, handle);
+    var isNode = !isReact && typeof global !== 'undefined' && typeof global.navigator === 'undefined'
+
+    if (isNode) {
+      require('./node_request.js')(options, data, handle);
     } else {
       if(isReact) {
         xmlhttp = new XMLHttpRequest();

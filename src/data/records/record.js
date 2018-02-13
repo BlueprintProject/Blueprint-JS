@@ -2,6 +2,7 @@
 
 var Utils = require('../../utils');
 var Adapter = require('../../adapter');
+var Session = require('../../session');
 
 /**
  * Creates a new record without a model
@@ -66,6 +67,15 @@ var Record = function(endpoint, object, preNested) {
       var File = require('../files/file');
       this.files[f.name] = new File(f, this);
     }
+  }
+
+  if(typeof this.object.created_by === 'undefined') {
+    this.object.created_by = Session.get('user_id');
+  }
+
+  if(typeof this.object.created_at === 'undefined') {
+    this.object.created_at = new Date() / 1000;
+    this.object.updated_at = new Date() / 1000;
   }
 
   return this;
@@ -251,12 +261,42 @@ Record.prototype.save = function() {
   var data = {
     id: this.object.id,
     content: this.object.content,
-    permissions: this.object.permissions
+    permissions: this.object.permissions,
   };
 
   if (this.object.user) {
     data.user = this.object.user;
   }
+
+  if (typeof this.object.subscription_keys !== 'undefined') {
+    data.subscription_keys = this.object.subscription_keys;
+  }
+
+  if(typeof this.object.id === 'undefined') {
+    this.object.created_at = new Date() / 1000;
+  }
+
+  this.object.updated_at = new Date() / 1000;
+
+  var _saveFilesIndex = 0;
+
+  var _saveFiles = function(filesNeedingSaving, promise) {
+    var file = filesNeedingSaving[_saveFilesIndex];
+
+    console.log(file, _saveFilesIndex);
+
+    if(typeof file === 'undefined') {
+      promise.send(false, that);
+    } else {
+      file.save().then(function(){
+        _saveFiles(filesNeedingSaving, promise, _saveFilesIndex++);
+      }).fail(function() {
+        _saveFiles(filesNeedingSaving, promise, _saveFilesIndex++);
+      });
+    }
+
+  }
+
 
   Adapter.Records.write(this.endpoint, data, function(returnData) {
     if (typeof returnData === 'undefined') {
@@ -264,7 +304,16 @@ Record.prototype.save = function() {
     } else {
       that.object = returnData;
       that._serverObjectContent = JSON.stringify(returnData.content);
-      promise.send(false, that);
+
+      var filesNeedingSaving = Object.values(that.files).filter(function(file) {
+        return file._shouldSave;
+      });
+
+      if(filesNeedingSaving.length === 0) {
+        promise.send(false, that);
+      } else {
+        _saveFiles(filesNeedingSaving, promise);
+      }
     }
   });
 
@@ -318,17 +367,74 @@ Record.prototype.didChange = function() {
   return localObjectContent !== this._serverObjectContent;
 };
 
+
+
 Record.prototype.update = function(data) {
   var results = [];
 
-  for (var key in data) {
-    var value = data[key];
-    results.push(this.set(key, value));
+  if(data.isBlueprintObject) {
+    var data = data.object;
+
+    var deepCopyInto = function(object, into) {
+      if(Array.isArray(object) && !Array.isArray(into)) {
+        into = [];
+      } else if(typeof object === 'object' && typeof into !== 'object') {
+        into = {};
+      }
+
+      for(var key in object) {
+        var value = object[key];
+        var type = typeof value;
+        if(type === 'object') {
+          into[key] = deepCopyInto(object[key], into[key]);
+        } else {
+          into[key] = value;
+        }
+      }
+
+      return into;
+    }
+
+    this.object.created_at = -1;
+
+    deepCopyInto(data, this.object);
+  } else {
+    for (var key in data) {
+      var value = data[key];
+      results.push(this.set(key, value));
+    }
   }
 
   return results;
 }
 
+Record.prototype.addSubscriptionKey = function(key) {
+  var keys = this.getSubscriptionKeys();
+
+  if(keys.indexOf(key) === -1) {
+    keys.push(key);
+  }
+}
+
+Record.prototype.removeSubscriptionKey = function(key) {
+  var keys = this.getSubscriptionKeys();
+  var index = keys.indexOf(key);
+
+  if(index !== -1) {
+    keys.splice(index, 1);
+  }
+}
+
+Record.prototype.getSubscriptionKeys = function() {
+  var keys = this.object.subscription_keys;
+
+  if(typeof this.object.subscription_keys === 'undefined' || this.object.subscription_keys === null) {
+    keys = [];
+    this.object.subscription_keys = keys;
+  }
+
+  return keys;
+}
 /**
   * Allows you to subclass this class
   * @function Blueprint.Data.Record.Extend

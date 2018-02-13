@@ -37,6 +37,9 @@ var File = function(obj, record, data) {
   this.object = properties;
   this.record = record;
 
+  this._shouldSave = false;
+  this._onSave = [];
+
   return this;
 };
 
@@ -55,6 +58,45 @@ File.prototype.get = function(key) {
  * @returns Promise
  */
 File.prototype.save = function() {
+  this.object.record_id = this.record.get('id'); // jshint ignore: line
+  this.record.files[this.get('name')] = this;
+
+
+  console.log(this);
+
+  if(typeof this.object.record_id === 'undefined') {
+    this._shouldSave = true;
+
+    var promise = new utils.promise();
+    this._onSave.push(promise);
+
+    return promise;
+  } else {
+    var promise = this._upload();
+
+    this._shouldSave = false;
+
+    var that = this;
+
+    promise.then(function(result) {
+      for(var i in that._onSave) {
+        that._onSave[i].send(false, result);
+      }
+
+      that._onSave = [];
+    }).fail(function(error) {
+      for(var i in that._onSave) {
+        that._onSave[i].send(error);
+      }
+
+      that._onSave = [];
+    });
+
+    return promise;
+  }
+}
+
+File.prototype._upload = function() {
   var promise = new utils.promise();
   var that = this;
   var path = this.endpoint + '/' + this.getRecordId() + '/files';
@@ -78,7 +120,7 @@ File.prototype.save = function() {
 
           var formData;
 
-          if (typeof global !== 'undefined') {
+          if (FormData === undefined) {
             var FormData = require('form-data');
             formData = new FormData();
           } else {
@@ -90,21 +132,18 @@ File.prototype.save = function() {
             formData.append(key, value);
           }
 
-          if (typeof global !== 'undefined') {
-            if(global.navigator &&
-              global.navigator.product === 'ReactNative') {
-                fetch(req.url, {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'multipart/form-data',
-                  },
-                  body: formData
-                }).then(function() {
-                  promise.send(false, that);
-                }).catch(function(err) {
-                  //console.log(err);
-                });
-            }
+          if (typeof global !== 'undefined' && global.navigator && global.navigator.product === 'ReactNative') {
+              fetch(req.url, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'multipart/form-data',
+                },
+                body: formData
+              }).then(function() {
+                promise.send(false, that);
+              }).catch(function(err) {
+          		  promise.send(err);
+              });
           } else {
             var xmlhttp;
 
@@ -158,7 +197,9 @@ File.prototype.getURL = function() {
   var presignedURL = this.get('presigned_url');
   var valid = this.get('presigned_expiration') > ((new Date()) / 1000);
 
-  if (presignedURL && valid) {
+  if(typeof this.data === 'object' && typeof this.data.uri !== 'undefined') {
+    return this.data.uri;
+  } else if (presignedURL && valid) {
     return this.get('presigned_url');
   } else {
     var file = {

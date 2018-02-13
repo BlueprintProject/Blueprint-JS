@@ -1,61 +1,96 @@
-import Blueprint from './src';
+var Blueprint = require('./');
 
-const Model = new Blueprint.Model('profiles', {
-  first_name: {
-    default: 'First Name',
+Blueprint.init({
+  applicationId: '000000000000000000000002',
+});
+
+
+var Post = new Blueprint.Model('posts', {
+  text: {
     type: String,
   },
 
-  last_name: {
-    default: 'Last Name',
-    type: String
+  title: {
+    type: String,
   },
 
-  test_field: {
-    type: Boolean,
-    protected: true,
+  comments: {
+    association: {
+      endpoint: 'comments',
+      scope: ((object) => {return {
+        post_id: object.get('id')
+      }}),
+
+      autoload: false,
+      multi: true,
+    }
   },
 
-  another_test: Number
-});
+  profile: {
+    association: {
+      endpoint: 'profiles',
+      scope: ((object) => {return {
+        created_by: object.get('created_by')
+      }}),
 
-class Profile extends Model {
-
-  static async getCurrentUserProfile() {
-    var user = await Blueprint.getCurrentUser();
-    try {
-      var profiles = await Profile.find({
-        id: user.get('id')
-      });
-
-      if(profiles.length === 0) {
-        return new Profile();
-      } else {
-        return profiles[0];
-      }
-    } catch(e) {
-      throw e;
+      autoload: true,
+      multi: false,
     }
   }
+});
 
-  name() {
-    return 'Jer A';
+var Message = new Blueprint.Model('messages', {
+  text: {
+    type: String,
+  },
+
+  profile: {
+    association: {
+      endpoint: 'profiles',
+      scope: ((object) => {return {
+        created_by: object.get('created_by')
+      }}),
+
+      autoload: true,
+      multi: false,
+    }
   }
+});
 
-}
+var cable = Message.watch("591ddd98e043f032087057db");
+cable.on("create", function(result) {
+  //console.log(result);
+  console.log(result.text);
+  console.log(result._record.object.content)
+});
 
-export default Profile;
+/*
+Post.find({}).then(function(records) {
+  var record = records[0];
+  record.addSubscriptionKey("23j88923j98j");
 
-var profile = new Profile();
-profile.first_name = 'This is a test';
+  record.set("test", new Date() / 1000);
 
-console.log(profile);
+  setTimeout(function(){
+	record.save()
+ }, 2000);
 
-console.log("___________")
+  record.flatten('post').then(function(data){
+    console.log(data, "!!!");
 
-profile.sync();
-console.log(profile._record.object);
+    console.log(data.post.text);
+    console.log(data.profile.get('first_name'));
+    console.log(data.comments[0].text);
+  });
+  record.comments().then(function(comments){
+    comments[0].profile().then(function(profile){
+      console.log(profile.get('first_name'), 'said', comments[0].get('text'));
+    })
+  }).catch(function(e) {
+    console.log(e);
+  });
 
-Profile.findOne({test: true}).then(function(a) {
-  console.log(a, a._record.object);
-})
+}).catch(function(e){
+  console.log(e);
+});
+*/

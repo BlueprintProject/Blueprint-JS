@@ -27,7 +27,7 @@ module.exports = function(grunt) {
       options: {
         transform: ['coffeeify'],
         plugin: ['bundle-collapser/plugin'],
-        exclude: ['src/utils/node_request.js']
+        exclude: ['src/utils/node_request.js', 'react-native']
       }
     },
     mochaTest: {
